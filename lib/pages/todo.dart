@@ -13,6 +13,10 @@ class TodoPage extends StatefulWidget {
 class _TodoPageState extends State<TodoPage> {
   late Future<List<Todo>> _futureTodos;
 
+  // 分组展开状态
+  bool _incompleteExpanded = true;
+  bool _completedExpanded = false;
+
   @override
   void initState() {
     super.initState();
@@ -22,15 +26,10 @@ class _TodoPageState extends State<TodoPage> {
   void _toggleDone(Todo todo, List<Todo> todos) {
     setState(() {
       final index = todos.indexOf(todo);
-      todos[index] = Todo(
-        title: todo.title,
-        done: !todo.done,
-        ddl: todo.ddl,
-      );
+      todos[index] = Todo(title: todo.title, done: !todo.done, ddl: todo.ddl);
     });
 
-    // 点击后立即保存
-    saveTodos(todos);
+    saveTodos(todos); // 点击后立即保存
   }
 
   String _formatDdl(DateTime? ddl) {
@@ -60,15 +59,16 @@ class _TodoPageState extends State<TodoPage> {
             String formatDdl() {
               if (selectedDate == null && selectedTime == null) return "未选择";
               final dateStr = selectedDate != null
-                  ? "${selectedDate!.year.toString().padLeft(4,'0')}-"
-                  "${selectedDate!.month.toString().padLeft(2,'0')}-"
-                  "${selectedDate!.day.toString().padLeft(2,'0')}"
+                  ? "${selectedDate!.year.toString().padLeft(4, '0')}-"
+                        "${selectedDate!.month.toString().padLeft(2, '0')}-"
+                        "${selectedDate!.day.toString().padLeft(2, '0')}"
                   : "";
               final timeStr = selectedTime != null
-                  ? "${selectedTime!.hour.toString().padLeft(2,'0')}:"
-                  "${selectedTime!.minute.toString().padLeft(2,'0')}:00"
+                  ? "${selectedTime!.hour.toString().padLeft(2, '0')}:"
+                        "${selectedTime!.minute.toString().padLeft(2, '0')}:00"
                   : "";
-              if (dateStr.isNotEmpty && timeStr.isNotEmpty) return "$dateStr $timeStr";
+              if (dateStr.isNotEmpty && timeStr.isNotEmpty)
+                return "$dateStr $timeStr";
               return dateStr.isNotEmpty ? dateStr : timeStr;
             }
 
@@ -93,7 +93,10 @@ class _TodoPageState extends State<TodoPage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 6,
+                              horizontal: 8,
+                            ),
                             decoration: BoxDecoration(
                               border: Border.all(color: Colors.grey),
                               borderRadius: BorderRadius.circular(6),
@@ -208,6 +211,30 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
+  Widget _buildTodoGroup(
+    String title,
+    bool expanded,
+    VoidCallback toggleExpanded,
+    List<Todo> todos,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildGroupHeader(
+          title: title,
+          expanded: expanded,
+          onTap: toggleExpanded,
+        ),
+        AnimatedCrossFade(
+          firstChild: Container(), // 收起状态
+          secondChild: Column(children: todos.map((t) => _buildTodoCard(t, todos)).toList()), // 展开状态
+          crossFadeState: expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 300),
+        )
+      ],
+    );
+  }
+
   Widget _buildTodoCard(Todo todo, List<Todo> todos) {
     final ddlText = _formatDdl(todo.ddl);
 
@@ -216,7 +243,7 @@ class _TodoPageState extends State<TodoPage> {
       child: Material(
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-            onTap: () => _showTodoDialog(todos, todo: todo),
+          onTap: () => _showTodoDialog(todos, todo: todo),
           child: Container(
             constraints: const BoxConstraints(minHeight: 72),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -229,13 +256,16 @@ class _TodoPageState extends State<TodoPage> {
                 Checkbox(
                   value: todo.done,
                   onChanged: (_) => _toggleDone(todo, todos),
+                  fillColor: MaterialStateProperty.resolveWith<Color?>(
+                    (states) => todo.done ? Colors.grey : null,
+                  ),
+                  checkColor: Colors.white,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 删除线动画
                       TweenAnimationBuilder<double>(
                         tween: Tween<double>(begin: 0, end: todo.done ? 1 : 0),
                         duration: const Duration(milliseconds: 300),
@@ -247,8 +277,9 @@ class _TodoPageState extends State<TodoPage> {
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
-                                  color:
-                                  todo.done ? Colors.grey : Colors.black87,
+                                  color: todo.done
+                                      ? Colors.grey
+                                      : Colors.black87,
                                 ),
                               ),
                               ClipRect(
@@ -270,7 +301,6 @@ class _TodoPageState extends State<TodoPage> {
                           );
                         },
                       ),
-
                       if (ddlText.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
@@ -294,49 +324,60 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
-  Widget _buildLoading() {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 20),
-          Text('正在拉取待办列表...'),
-        ],
+  Widget _buildGroupHeader({
+    required String title,
+    required bool expanded,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
+      trailing: Icon(expanded ? Icons.expand_less : Icons.expand_more),
+      onTap: onTap,
     );
   }
 
-  Widget _buildError(Object error) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 50),
-            const SizedBox(height: 20),
-            const Text('获取待办列表失败', style: TextStyle(fontSize: 18)),
-            const SizedBox(height: 10),
-            Text(
-              error.toString(),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _futureTodos = fetchTodos(); // 重试
-                });
-              },
-              child: const Text('重试'),
-            )
-          ],
-        ),
+  Widget _buildLoading() => const Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircularProgressIndicator(),
+        SizedBox(height: 20),
+        Text('正在拉取待办列表...'),
+      ],
+    ),
+  );
+
+  Widget _buildError(Object error) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 50),
+          const SizedBox(height: 20),
+          const Text('获取待办列表失败', style: TextStyle(fontSize: 18)),
+          const SizedBox(height: 10),
+          Text(
+            error.toString(),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _futureTodos = fetchTodos(); // 重试
+              });
+            },
+            child: const Text('重试'),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -353,17 +394,29 @@ class _TodoPageState extends State<TodoPage> {
             }
 
             final todos = snapshot.data ?? [];
+            if (todos.isEmpty) return const Center(child: Text("暂无TODO"));
 
-            if (todos.isEmpty) {
-              return const Center(child: Text("暂无TODO"));
-            }
+            final incompleteTodos = todos.where((t) => !t.done).toList();
+            final completedTodos = todos.where((t) => t.done).toList();
 
-            return ListView.builder(
-              itemCount: todos.length,
-              itemBuilder: (context, index) {
-                final todo = todos[index];
-                return _buildTodoCard(todo, todos);
-              },
+            return ListView(
+              children: [
+                _buildTodoGroup(
+                  "未完成",
+                  _incompleteExpanded,
+                  () => setState(
+                    () => _incompleteExpanded = !_incompleteExpanded,
+                  ),
+                  incompleteTodos,
+                ),
+                _buildTodoGroup(
+                  "已完成",
+                  _completedExpanded,
+                  () =>
+                      setState(() => _completedExpanded = !_completedExpanded),
+                  completedTodos,
+                ),
+              ],
             );
           },
         ),

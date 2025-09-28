@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:todolist/core/const.dart';
-import 'package:todolist/core/storage.dart';
-
+import 'package:todolist/core/storage.dart'; // fetchTodos / saveTodos
+import 'dart:async';
 
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
@@ -16,7 +16,7 @@ class _TodoPageState extends State<TodoPage> {
   @override
   void initState() {
     super.initState();
-    _futureTodos = fetchTodos(); // 异步加载
+    _futureTodos = fetchTodos();
   }
 
   void _toggleDone(Todo todo, List<Todo> todos) {
@@ -29,12 +29,183 @@ class _TodoPageState extends State<TodoPage> {
       );
     });
 
+    // 点击后立即保存
     saveTodos(todos);
   }
 
   String _formatDdl(DateTime? ddl) {
     if (ddl == null) return "";
-    return "截止:${ddl.year}-${ddl.month}-${ddl.day}";
+    return "截止: "
+        "${ddl.year.toString().padLeft(4, '0')}-"
+        "${ddl.month.toString().padLeft(2, '0')}-"
+        "${ddl.day.toString().padLeft(2, '0')} "
+        "${ddl.hour.toString().padLeft(2, '0')}:"
+        "${ddl.minute.toString().padLeft(2, '0')}:"
+        "${ddl.second.toString().padLeft(2, '0')}";
+  }
+
+  Future<void> _showTodoDialog(List<Todo> todos, {Todo? todo}) async {
+    final isEditing = todo != null;
+    final _titleController = TextEditingController(text: todo?.title ?? "");
+    DateTime? selectedDate = todo?.ddl;
+    TimeOfDay? selectedTime = todo?.ddl != null
+        ? TimeOfDay(hour: todo!.ddl!.hour, minute: todo.ddl!.minute)
+        : null;
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            String formatDdl() {
+              if (selectedDate == null && selectedTime == null) return "未选择";
+              final dateStr = selectedDate != null
+                  ? "${selectedDate!.year.toString().padLeft(4,'0')}-"
+                  "${selectedDate!.month.toString().padLeft(2,'0')}-"
+                  "${selectedDate!.day.toString().padLeft(2,'0')}"
+                  : "";
+              final timeStr = selectedTime != null
+                  ? "${selectedTime!.hour.toString().padLeft(2,'0')}:"
+                  "${selectedTime!.minute.toString().padLeft(2,'0')}:00"
+                  : "";
+              if (dateStr.isNotEmpty && timeStr.isNotEmpty) return "$dateStr $timeStr";
+              return dateStr.isNotEmpty ? dateStr : timeStr;
+            }
+
+            return AlertDialog(
+              title: Text(isEditing ? "编辑待办" : "添加待办"),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: "名称",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Text("截止时间:"),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              formatDdl(),
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () async {
+                              final now = DateTime.now();
+                              final pickedDate = await showDatePicker(
+                                context: context,
+                                initialDate: selectedDate ?? now,
+                                firstDate: now,
+                                lastDate: DateTime(2100),
+                              );
+                              if (pickedDate != null) {
+                                setDialogState(() {
+                                  selectedDate = pickedDate;
+                                });
+                              }
+                            },
+                            child: const Text("选择日期"),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () async {
+                              final pickedTime = await showTimePicker(
+                                context: context,
+                                initialTime: selectedTime ?? TimeOfDay.now(),
+                              );
+                              if (pickedTime != null) {
+                                setDialogState(() {
+                                  selectedTime = pickedTime;
+                                });
+                              }
+                            },
+                            child: const Text("选择时间"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("取消"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final title = _titleController.text.trim();
+                    if (title.isEmpty) return;
+
+                    DateTime? ddl;
+                    if (selectedDate != null) {
+                      ddl = DateTime(
+                        selectedDate!.year,
+                        selectedDate!.month,
+                        selectedDate!.day,
+                        selectedTime?.hour ?? 0,
+                        selectedTime?.minute ?? 0,
+                        0,
+                      );
+                    } else if (selectedTime != null) {
+                      final now = DateTime.now();
+                      ddl = DateTime(
+                        now.year,
+                        now.month,
+                        now.day,
+                        selectedTime!.hour,
+                        selectedTime!.minute,
+                        0,
+                      );
+                    }
+
+                    if (isEditing) {
+                      final index = todos.indexOf(todo!);
+                      todos[index] = Todo(
+                        title: title,
+                        done: todo.done,
+                        ddl: ddl,
+                      );
+                    } else {
+                      todos.add(Todo(title: title, done: false, ddl: ddl));
+                    }
+
+                    setState(() {});
+                    saveTodos(todos);
+                    Navigator.pop(context);
+                  },
+                  child: Text(isEditing ? "保存" : "添加"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildTodoCard(Todo todo, List<Todo> todos) {
@@ -45,7 +216,7 @@ class _TodoPageState extends State<TodoPage> {
       child: Material(
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => _toggleDone(todo, todos),
+            onTap: () => _showTodoDialog(todos, todo: todo),
           child: Container(
             constraints: const BoxConstraints(minHeight: 72),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -64,7 +235,7 @@ class _TodoPageState extends State<TodoPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 标题文字 + 左到右删除线动画覆盖文字
+                      // 删除线动画
                       TweenAnimationBuilder<double>(
                         tween: Tween<double>(begin: 0, end: todo.done ? 1 : 0),
                         duration: const Duration(milliseconds: 300),
@@ -100,7 +271,6 @@ class _TodoPageState extends State<TodoPage> {
                         },
                       ),
 
-                      // ddl 条件显示
                       if (ddlText.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
@@ -131,7 +301,7 @@ class _TodoPageState extends State<TodoPage> {
         children: [
           CircularProgressIndicator(),
           SizedBox(height: 20),
-          Text('正在加载待办列表...'),
+          Text('正在拉取待办列表...'),
         ],
       ),
     );
@@ -197,6 +367,16 @@ class _TodoPageState extends State<TodoPage> {
             );
           },
         ),
+      ),
+      floatingActionButton: FutureBuilder<List<Todo>>(
+        future: _futureTodos,
+        builder: (context, snapshot) {
+          final todos = snapshot.data ?? [];
+          return FloatingActionButton(
+            onPressed: () => _showTodoDialog(todos),
+            child: const Icon(Icons.add),
+          );
+        },
       ),
     );
   }

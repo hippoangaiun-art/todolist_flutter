@@ -9,7 +9,7 @@ Future<int> getAppVersionCode() async {
   return int.parse(packageInfo.version); // 构建号（如 12）
 }
 
-const githubUrl = "https://github.com/hippoangaiun-art/todolist_flutter";
+
 
 Future<void> checkUpdate() async {
   //TODO 写检查更新
@@ -28,6 +28,7 @@ class Todo {
 }
 
 class Const {
+  static final githubUrl = "https://github.com/hippoangaiun-art/todolist_flutter";
   static final todoLists = PrefField<String>("todolist", """
   [
   {

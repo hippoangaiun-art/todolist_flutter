@@ -504,12 +504,48 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
         builder: (context, snapshot) {
           final todos = snapshot.data ?? [];
           return FloatingActionButton(
-            onPressed: () => _showTodoDialog(todos),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (context) {
+                  return SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.edit),
+                          title: const Text("手工录入"),
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showTodoDialog(todos); // 打开已有的添加对话框
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.upload_file),
+                          title: const Text("从 Excel 导入"),
+                          onTap: () {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("从 Excel 导入功能开发中...")),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
             child: const Icon(Icons.add),
           );
         },
       )
           : null,
+
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {

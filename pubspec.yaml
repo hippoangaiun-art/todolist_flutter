@@ -20,8 +20,12 @@ dependencies:
   flutter_native_splash: ^2.3.0
   package_info_plus: ^8.0.0
   permission_handler: ^12.0.1
+  path_provider: ^2.1.5
   cupertino_icons: ^1.0.8
   flutter_svg: ^2.1.2
+  excel: ^4.0.6
+  file_picker: ^10.3.3
+  syncfusion_flutter_xlsio: ^29.2.11
 
 dev_dependencies:
   flutter_test:
@@ -43,4 +47,3 @@ flutter_native_splash:
   ios: true
   image_ios: "assets/icon/splash.png"
   image_android: "assets/icon/splash.png"
-

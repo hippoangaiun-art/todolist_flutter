@@ -3,6 +3,8 @@ import 'package:todolist/core/const.dart';
 import 'package:todolist/core/storage.dart';
 import 'dart:async';
 
+import 'package:todolist/pages/about.dart';
+
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
 
@@ -11,7 +13,8 @@ class TodoPage extends StatefulWidget {
 }
 
 // 需要 vsync 给 AnimatedSize 使用
-class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin {
+class _TodoPageState extends State<TodoPage>
+    with SingleTickerProviderStateMixin {
   late Future<List<Todo>> _futureTodos;
 
   // 分组展开状态
@@ -29,7 +32,11 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
     setState(() {
       final index = allTodos.indexOf(todo);
       if (index >= 0) {
-        allTodos[index] = Todo(title: todo.title, done: !todo.done, ddl: todo.ddl);
+        allTodos[index] = Todo(
+          title: todo.title,
+          done: !todo.done,
+          ddl: todo.ddl,
+        );
       }
     });
 
@@ -64,12 +71,12 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
               if (selectedDate == null && selectedTime == null) return "未选择";
               final dateStr = selectedDate != null
                   ? "${selectedDate!.year.toString().padLeft(4, '0')}-"
-                  "${selectedDate!.month.toString().padLeft(2, '0')}-"
-                  "${selectedDate!.day.toString().padLeft(2, '0')}"
+                        "${selectedDate!.month.toString().padLeft(2, '0')}-"
+                        "${selectedDate!.day.toString().padLeft(2, '0')}"
                   : "";
               final timeStr = selectedTime != null
                   ? "${selectedTime!.hour.toString().padLeft(2, '0')}:"
-                  "${selectedTime!.minute.toString().padLeft(2, '0')}:00"
+                        "${selectedTime!.minute.toString().padLeft(2, '0')}:00"
                   : "";
               if (dateStr.isNotEmpty && timeStr.isNotEmpty)
                 return "$dateStr $timeStr";
@@ -250,15 +257,14 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
     );
   }
 
-
   // ✅ 修改 _buildTodoGroup
   Widget _buildTodoGroup(
-      String title,
-      bool expanded,
-      VoidCallback toggleExpanded,
-      List<Todo> groupTodos,
-      List<Todo> allTodos,
-      ) {
+    String title,
+    bool expanded,
+    VoidCallback toggleExpanded,
+    List<Todo> groupTodos,
+    List<Todo> allTodos,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -273,8 +279,10 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
             children: groupTodos.map((t) {
               // ✅ 用 Dismissible 包裹卡片
               return Dismissible(
-                key: ValueKey(t.hashCode), // 每个 item 唯一 key
-                direction: DismissDirection.endToStart, // 只允许左滑
+                key: ValueKey(t.hashCode),
+                // 每个 item 唯一 key
+                direction: DismissDirection.endToStart,
+                // 只允许左滑
                 background: Container(
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -286,24 +294,23 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                     allTodos.remove(t);
                   });
                   await saveTodos(allTodos);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("已删除待办: ${t.title}")),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("已删除待办: ${t.title}")));
                 },
                 child: _buildTodoCard(t, allTodos), // 原来的卡片
               );
             }).toList(),
           ),
-          crossFadeState:
-          expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 300),
           alignment: Alignment.topCenter,
         ),
       ],
     );
   }
-
-
 
   // card 接收 master list（allTodos）
   Widget _buildTodoCard(Todo todo, List<Todo> todos) {
@@ -329,7 +336,7 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                   value: todo.done,
                   onChanged: (_) => _toggleDone(todo, todos),
                   fillColor: MaterialStateProperty.resolveWith<Color?>(
-                        (states) => todo.done ? Colors.grey : null,
+                    (states) => todo.done ? Colors.grey : null,
                   ),
                   checkColor: Colors.white,
                 ),
@@ -479,71 +486,79 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                   _buildTodoGroup(
                     "未完成",
                     _incompleteExpanded,
-                        () => setState(() => _incompleteExpanded = !_incompleteExpanded),
+                    () => setState(
+                      () => _incompleteExpanded = !_incompleteExpanded,
+                    ),
                     incompleteTodos,
                     todos,
                   ),
                   _buildTodoGroup(
                     "已完成",
                     _completedExpanded,
-                        () => setState(() => _completedExpanded = !_completedExpanded),
+                    () => setState(
+                      () => _completedExpanded = !_completedExpanded,
+                    ),
                     completedTodos,
                     todos,
                   ),
                 ],
               );
             } else {
-              return const Center(child: Text("关于页面开发中..."));
+              return AboutPage();
             }
           },
         ),
       ),
       floatingActionButton: _selectedIndex == 0
           ? FutureBuilder<List<Todo>>(
-        future: _futureTodos,
-        builder: (context, snapshot) {
-          final todos = snapshot.data ?? [];
-          return FloatingActionButton(
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                builder: (context) {
-                  return SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.edit),
-                          title: const Text("手工录入"),
-                          onTap: () {
-                            Navigator.pop(context);
-                            _showTodoDialog(todos); // 打开已有的添加对话框
-                          },
+              future: _futureTodos,
+              builder: (context, snapshot) {
+                final todos = snapshot.data ?? [];
+                return FloatingActionButton(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(16),
                         ),
-                        ListTile(
-                          leading: const Icon(Icons.upload_file),
-                          title: const Text("从 Excel 导入"),
-                          onTap: () {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("从 Excel 导入功能开发中...")),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-            child: const Icon(Icons.add),
-          );
-        },
-      )
+                      ),
+                      builder: (context) {
+                        return SafeArea(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.edit),
+                                title: const Text("手工录入"),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _showTodoDialog(todos); // 打开已有的添加对话框
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.upload_file),
+                                title: const Text("从 Excel 导入"),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("从 Excel 导入功能开发中..."),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  child: const Icon(Icons.add),
+                );
+              },
+            )
           : null,
 
       bottomNavigationBar: NavigationBar(
@@ -559,7 +574,7 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
           ),
           NavigationDestination(
             icon: Icon(Icons.info_outlined),
-            selectedIcon: Icon(Icons.info),
+            selectedIcon: Icon(Icons.info_outlined),
             label: "关于",
           ),
         ],

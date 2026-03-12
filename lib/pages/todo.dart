@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:todolist/core/const.dart';
-import 'package:todolist/core/storage.dart'; // fetchTodos / saveTodos
+import 'package:todolist/core/storage.dart';
 import 'dart:async';
 
 class TodoPage extends StatefulWidget {
@@ -10,7 +10,8 @@ class TodoPage extends StatefulWidget {
   State<TodoPage> createState() => _TodoPageState();
 }
 
-class _TodoPageState extends State<TodoPage> {
+// 需要 vsync 给 AnimatedSize 使用
+class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin {
   late Future<List<Todo>> _futureTodos;
 
   // 分组展开状态
@@ -23,13 +24,16 @@ class _TodoPageState extends State<TodoPage> {
     _futureTodos = fetchTodos();
   }
 
-  void _toggleDone(Todo todo, List<Todo> todos) {
+  // 现在传入的是全部 todos（master list），并在 master list 中更新
+  void _toggleDone(Todo todo, List<Todo> allTodos) {
     setState(() {
-      final index = todos.indexOf(todo);
-      todos[index] = Todo(title: todo.title, done: !todo.done, ddl: todo.ddl);
+      final index = allTodos.indexOf(todo);
+      if (index >= 0) {
+        allTodos[index] = Todo(title: todo.title, done: !todo.done, ddl: todo.ddl);
+      }
     });
 
-    saveTodos(todos); // 点击后立即保存
+    saveTodos(allTodos); // 点击后立即保存
   }
 
   String _formatDdl(DateTime? ddl) {
@@ -60,12 +64,12 @@ class _TodoPageState extends State<TodoPage> {
               if (selectedDate == null && selectedTime == null) return "未选择";
               final dateStr = selectedDate != null
                   ? "${selectedDate!.year.toString().padLeft(4, '0')}-"
-                        "${selectedDate!.month.toString().padLeft(2, '0')}-"
-                        "${selectedDate!.day.toString().padLeft(2, '0')}"
+                  "${selectedDate!.month.toString().padLeft(2, '0')}-"
+                  "${selectedDate!.day.toString().padLeft(2, '0')}"
                   : "";
               final timeStr = selectedTime != null
                   ? "${selectedTime!.hour.toString().padLeft(2, '0')}:"
-                        "${selectedTime!.minute.toString().padLeft(2, '0')}:00"
+                  "${selectedTime!.minute.toString().padLeft(2, '0')}:00"
                   : "";
               if (dateStr.isNotEmpty && timeStr.isNotEmpty)
                 return "$dateStr $timeStr";
@@ -188,16 +192,18 @@ class _TodoPageState extends State<TodoPage> {
 
                     if (isEditing) {
                       final index = todos.indexOf(todo!);
-                      todos[index] = Todo(
-                        title: title,
-                        done: todo.done,
-                        ddl: ddl,
-                      );
+                      if (index >= 0) {
+                        todos[index] = Todo(
+                          title: title,
+                          done: todo!.done,
+                          ddl: ddl,
+                        );
+                      }
                     } else {
                       todos.add(Todo(title: title, done: false, ddl: ddl));
                     }
 
-                    setState(() {});
+                    setState(() {}); // 触发 UI 刷新
                     saveTodos(todos);
                     Navigator.pop(context);
                   },
@@ -211,12 +217,48 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
+  Future<void> _showTodoOptionsDialog(Todo todo, List<Todo> todos) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("操作"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text("删除待办"),
+                onTap: () {
+                  setState(() {
+                    todos.remove(todo);
+                  });
+                  saveTodos(todos);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("取消"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+  // ✅ 修改 _buildTodoGroup
   Widget _buildTodoGroup(
-    String title,
-    bool expanded,
-    VoidCallback toggleExpanded,
-    List<Todo> todos,
-  ) {
+      String title,
+      bool expanded,
+      VoidCallback toggleExpanded,
+      List<Todo> groupTodos,
+      List<Todo> allTodos,
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -226,15 +268,44 @@ class _TodoPageState extends State<TodoPage> {
           onTap: toggleExpanded,
         ),
         AnimatedCrossFade(
-          firstChild: Container(), // 收起状态
-          secondChild: Column(children: todos.map((t) => _buildTodoCard(t, todos)).toList()), // 展开状态
-          crossFadeState: expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          firstChild: const SizedBox.shrink(),
+          secondChild: Column(
+            children: groupTodos.map((t) {
+              // ✅ 用 Dismissible 包裹卡片
+              return Dismissible(
+                key: ValueKey(t.hashCode), // 每个 item 唯一 key
+                direction: DismissDirection.endToStart, // 只允许左滑
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  color: Colors.red,
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (direction) async {
+                  setState(() {
+                    allTodos.remove(t);
+                  });
+                  await saveTodos(allTodos);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("已删除待办: ${t.title}")),
+                  );
+                },
+                child: _buildTodoCard(t, allTodos), // 原来的卡片
+              );
+            }).toList(),
+          ),
+          crossFadeState:
+          expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 300),
-        )
+          alignment: Alignment.topCenter,
+        ),
       ],
     );
   }
 
+
+
+  // card 接收 master list（allTodos）
   Widget _buildTodoCard(Todo todo, List<Todo> todos) {
     final ddlText = _formatDdl(todo.ddl);
 
@@ -244,6 +315,7 @@ class _TodoPageState extends State<TodoPage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () => _showTodoDialog(todos, todo: todo),
+          onLongPress: () => _showTodoOptionsDialog(todo, todos), // ⬅️ 新增
           child: Container(
             constraints: const BoxConstraints(minHeight: 72),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -257,7 +329,7 @@ class _TodoPageState extends State<TodoPage> {
                   value: todo.done,
                   onChanged: (_) => _toggleDone(todo, todos),
                   fillColor: MaterialStateProperty.resolveWith<Color?>(
-                    (states) => todo.done ? Colors.grey : null,
+                        (states) => todo.done ? Colors.grey : null,
                   ),
                   checkColor: Colors.white,
                 ),
@@ -288,7 +360,7 @@ class _TodoPageState extends State<TodoPage> {
                                   widthFactor: value,
                                   child: Text(
                                     todo.title,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.normal,
                                       color: Colors.grey,
@@ -379,6 +451,8 @@ class _TodoPageState extends State<TodoPage> {
     ),
   );
 
+  int _selectedIndex = 0; // ⬅️ 在 State 里添加一个字段，记录当前页面索引
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -387,41 +461,45 @@ class _TodoPageState extends State<TodoPage> {
         child: FutureBuilder<List<Todo>>(
           future: _futureTodos,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return _buildLoading();
-            } else if (snapshot.hasError) {
-              return _buildError(snapshot.error!);
-            }
+            if (_selectedIndex == 0) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildLoading();
+              } else if (snapshot.hasError) {
+                return _buildError(snapshot.error!);
+              }
 
-            final todos = snapshot.data ?? [];
-            if (todos.isEmpty) return const Center(child: Text("暂无TODO"));
+              final todos = snapshot.data ?? [];
+              if (todos.isEmpty) return const Center(child: Text("暂无TODO"));
 
-            final incompleteTodos = todos.where((t) => !t.done).toList();
-            final completedTodos = todos.where((t) => t.done).toList();
+              final incompleteTodos = todos.where((t) => !t.done).toList();
+              final completedTodos = todos.where((t) => t.done).toList();
 
-            return ListView(
-              children: [
-                _buildTodoGroup(
-                  "未完成",
-                  _incompleteExpanded,
-                  () => setState(
-                    () => _incompleteExpanded = !_incompleteExpanded,
+              return ListView(
+                children: [
+                  _buildTodoGroup(
+                    "未完成",
+                    _incompleteExpanded,
+                        () => setState(() => _incompleteExpanded = !_incompleteExpanded),
+                    incompleteTodos,
+                    todos,
                   ),
-                  incompleteTodos,
-                ),
-                _buildTodoGroup(
-                  "已完成",
-                  _completedExpanded,
-                  () =>
-                      setState(() => _completedExpanded = !_completedExpanded),
-                  completedTodos,
-                ),
-              ],
-            );
+                  _buildTodoGroup(
+                    "已完成",
+                    _completedExpanded,
+                        () => setState(() => _completedExpanded = !_completedExpanded),
+                    completedTodos,
+                    todos,
+                  ),
+                ],
+              );
+            } else {
+              return const Center(child: Text("关于页面开发中..."));
+            }
           },
         ),
       ),
-      floatingActionButton: FutureBuilder<List<Todo>>(
+      floatingActionButton: _selectedIndex == 0
+          ? FutureBuilder<List<Todo>>(
         future: _futureTodos,
         builder: (context, snapshot) {
           final todos = snapshot.data ?? [];
@@ -430,6 +508,25 @@ class _TodoPageState extends State<TodoPage> {
             child: const Icon(Icons.add),
           );
         },
+      )
+          : null,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) {
+          setState(() => _selectedIndex = index);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.list_alt_outlined),
+            selectedIcon: Icon(Icons.list_alt),
+            label: "待办",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.info_outlined),
+            selectedIcon: Icon(Icons.info),
+            label: "关于",
+          ),
+        ],
       ),
     );
   }

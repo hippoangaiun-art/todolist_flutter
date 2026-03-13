@@ -5,41 +5,19 @@ import 'package:todolist/core/const.dart';
 Future<List<Todo>> fetchTodos() async {
   try {
     final jsonStr = await Const.todoLists.value;
-    final List<dynamic> list = json.decode(jsonStr);
-
-    return list.map((item) {
-      final name = item['name'] ?? '未命名';
-      final done = item['done'] ?? false;
-      final ddlStr = item['ddl'] ?? '';
-      DateTime? ddl;
-      if (ddlStr.isNotEmpty) {
-        try {
-          ddl = DateTime.parse(ddlStr);
-        } catch (_) {
-          ddl = null;
-        }
-      }
-      return Todo(title: name, done: done, ddl: ddl);
-    }).toList();
+    if (jsonStr.isEmpty) return [];
+    final List<dynamic> jsonList = jsonDecode(jsonStr);
+    return jsonList.map((e) => Todo.fromJson(e)).toList();
   } catch (e) {
-    throw Exception('解析待办列表失败: $e');
+    return [];
   }
 }
 
-/// 保存待办列表到 Const.todoLists
+
 Future<void> saveTodos(List<Todo> todos) async {
-  try {
-    final jsonList = todos.map((t) {
-      return {
-        "name": t.title,
-        "done": t.done,
-        "ddl": t.ddl?.toIso8601String() ?? "",
-      };
-    }).toList();
-
-    final jsonStr = json.encode(jsonList);
-    await Const.todoLists.setValue(jsonStr);
-  } catch (e) {
-    debugPrint("保存待办列表失败: $e");
-  }
+  final List<Map<String, dynamic>> jsonList =
+  todos.map((t) => t.toJson()).toList();
+  final jsonStr = jsonEncode(jsonList);
+  await Const.todoLists.setValue(jsonStr);
 }
+

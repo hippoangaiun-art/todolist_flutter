@@ -1,21 +1,19 @@
 import 'package:permission_handler/permission_handler.dart';
+import 'package:todolist/core/const.dart';
 
-// 检查并请求存储权限
-// 返回 true 表示已授权，false 表示未授权
-Future<bool> checkAndRequestStoragePermission() async {
-  PermissionStatus status;
-  if (await Permission.storage.isGranted) {
-    return true;
+Future<bool> checkStoragePermission() async {
+  // 检查状态
+  var status = await Permission.storage.status;
+
+  if (status.isDenied) {
+    status = await Permission.storage.request();
   }
 
-  status = await Permission.storage.request();
-
-  if (status.isGranted) {
-    return true;
-  } else if (status.isPermanentlyDenied) {
+  if (status.isPermanentlyDenied) {
+    // 用户永久拒绝，需要跳转设置
     openAppSettings();
     return false;
   }
 
-  return false;
+  return status.isGranted;
 }

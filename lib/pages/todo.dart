@@ -670,7 +670,7 @@ class _TodoPageState extends State<TodoPage>
                     "未完成",
                     _incompleteExpanded,
                     () => setState(
-                      () => _incompleteExpanded = !_incompleteExpanded,
+                      () => _incompleteExpanded = _incompleteExpanded,
                     ),
                     incompleteTodos,
                     todos,
@@ -679,7 +679,7 @@ class _TodoPageState extends State<TodoPage>
                     "已完成",
                     _completedExpanded,
                     () => setState(
-                      () => _completedExpanded = !_completedExpanded,
+                      () => _completedExpanded = _completedExpanded,
                     ),
                     completedTodos,
                     todos,

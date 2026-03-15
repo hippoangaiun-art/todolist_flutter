@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:todolist/core/const.dart';
 
 Future<List<Todo>> fetchTodos() async {

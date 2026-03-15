@@ -222,12 +222,8 @@ class CourseImporter {
     final result = List<Todo>.from(existing);
 
     for (var importedTodo in imported) {
-      // 检查是否已存在相同的待办
-      final isDuplicate = existing.any((todo) =>
-      todo.weekday == importedTodo.weekday &&
-          todo.time?.hour == importedTodo.time?.hour &&
-          todo.time?.minute == importedTodo.time?.minute &&
-          todo.title == importedTodo.title);
+      // 简化判重：仅按标题检查
+      final isDuplicate = existing.any((todo) => todo.title == importedTodo.title);
 
       if (!isDuplicate) {
         result.add(importedTodo);

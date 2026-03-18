@@ -59,7 +59,7 @@ class _TodoPageState extends State<TodoPage>
 
   Future<void> _showTodoDialog(List<Todo> todos, {Todo? todo}) async {
     final isEditing = todo != null;
-    final _titleController = TextEditingController(text: todo?.title ?? "");
+    final titleController = TextEditingController(text: todo?.title ?? "");
     int? selectedWeekday = todo?.weekday; // 1-7
     TimeOfDay? selectedTime = todo?.time;
 
@@ -76,7 +76,7 @@ class _TodoPageState extends State<TodoPage>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TextField(
-                      controller: _titleController,
+                      controller: titleController,
                       maxLines: 3,
                       minLines: 1,
                       decoration: const InputDecoration(
@@ -102,7 +102,7 @@ class _TodoPageState extends State<TodoPage>
                             ),
                             child: Text(
                               selectedWeekday != null
-                                  ? "${["周一", "周二", "周三", "周四", "周五", "周六", "周日"][selectedWeekday! - 1]}"
+                                  ? ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][selectedWeekday! - 1]
                                   : "未选择",
                               style: const TextStyle(fontSize: 14),
                             ),
@@ -175,11 +175,11 @@ class _TodoPageState extends State<TodoPage>
                 ),
                 TextButton(
                   onPressed: () {
-                    final title = _titleController.text.trim();
+                    final title = titleController.text.trim();
                     if (title.isEmpty) return;
 
                     if (isEditing) {
-                      final index = todos.indexOf(todo!);
+                      final index = todos.indexOf(todo);
                       if (index >= 0) {
                         todos[index] = Todo(
                           title: title,
@@ -249,14 +249,14 @@ class _TodoPageState extends State<TodoPage>
   /// Excel 导入功能
   Future<void> _importFromExcel(List<Todo> currentTodos) async {
     try {
-      var granted = await checkStoragePermission();
-      // if (!granted) {
-      //   if (!mounted) return;
-      //   ScaffoldMessenger.of(
-      //     context,
-      //   ).showSnackBar(const SnackBar(content: Text("请先授予存储权限")));
-      //   return;
-      // }
+      final granted = await checkStoragePermission();
+      if (!granted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("请先授予存储权限")),
+        );
+        return;
+      }
 
       // 选择文件
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -389,6 +389,7 @@ class _TodoPageState extends State<TodoPage>
                     allTodos.remove(t);
                   });
                   await saveTodos(allTodos);
+                  if (!mounted) return;
                   ScaffoldMessenger.of(
                     context,
                   ).showSnackBar(SnackBar(content: Text("已删除待办: ${t.title}")));
@@ -435,7 +436,7 @@ class _TodoPageState extends State<TodoPage>
                 Checkbox(
                   value: todo.done,
                   onChanged: (_) => _toggleDone(todo, todos),
-                  fillColor: MaterialStateProperty.resolveWith<Color?>(
+                  fillColor: WidgetStateProperty.resolveWith<Color?>(
                     (states) => todo.done ? Colors.grey : null,
                   ),
                   checkColor: Colors.white,
@@ -580,10 +581,11 @@ class _TodoPageState extends State<TodoPage>
                       value: tempSelection.contains(weekday),
                       onChanged: (checked) {
                         setDialogState(() {
-                          if (checked == true)
+                          if (checked == true) {
                             tempSelection.add(weekday);
-                          else
+                          } else {
                             tempSelection.remove(weekday);
+                          }
                         });
                       },
                     );
@@ -593,10 +595,11 @@ class _TodoPageState extends State<TodoPage>
                     value: tempSelection.contains(null),
                     onChanged: (checked) {
                       setDialogState(() {
-                        if (checked == true)
+                        if (checked == true) {
                           tempSelection.add(null);
-                        else
+                        } else {
                           tempSelection.remove(null);
+                        }
                       });
                     },
                   ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:todolist/pages/todo.dart';
-
+import 'package:todolist/pages/app_shell.dart';
 
 void main() {
   runApp(const TodoApp());
@@ -13,13 +12,13 @@ class TodoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      localizationsDelegates: [
+      localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: [
-        const Locale('zh', 'CN'),
+      supportedLocales: const [
+        Locale('zh', 'CN'),
       ],
       title: 'TODO-List',
       debugShowCheckedModeBanner: false,
@@ -27,7 +26,7 @@ class TodoApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: Colors.teal,
       ),
-      home: const TodoPage(),
+      home: const AppShell(),
     );
   }
 }

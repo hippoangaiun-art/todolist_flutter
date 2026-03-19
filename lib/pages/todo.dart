@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:todolist/core/const.dart';
+import 'package:todolist/core/todo_rules.dart';
 import 'package:todolist/data/todo_repository.dart';
 import 'package:todolist/models/todo_item_v2.dart';
 
@@ -14,11 +15,7 @@ class _TodoPageState extends State<TodoPage> {
   final TodoRepository _repository = TodoRepository();
   List<TodoItemV2> _todos = const [];
   bool _loading = true;
-  DateTime _selectedDate = _normalizeDate(DateTime.now());
-
-  static DateTime _normalizeDate(DateTime date) {
-    return DateTime(date.year, date.month, date.day);
-  }
+  DateTime _selectedDate = TodoRules.normalize(DateTime.now());
 
   @override
   void initState() {
@@ -39,24 +36,6 @@ class _TodoPageState extends State<TodoPage> {
 
   Future<void> _saveTodos() async {
     await _repository.saveAll(_todos);
-  }
-
-  bool _isSameDate(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
-  List<TodoItemV2> _todosForSelectedDate() {
-    return _todos.where((todo) {
-      if (todo.repeatWeekdays.isEmpty) {
-        return _isSameDate(_normalizeDate(todo.date), _selectedDate);
-      }
-      if (!_selectedDate.isBefore(_normalizeDate(todo.date)) &&
-          todo.repeatWeekdays.contains(_selectedDate.weekday)) {
-        return true;
-      }
-      return false;
-    }).toList()
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
   String _formatDate(DateTime date) {
@@ -80,27 +59,24 @@ class _TodoPageState extends State<TodoPage> {
       return;
     }
     setState(() {
-      _selectedDate = _normalizeDate(picked);
+      _selectedDate = TodoRules.normalize(picked);
     });
   }
 
-  Future<void> _toggleDone(TodoItemV2 todo) async {
-    final idx = _todos.indexWhere((e) => e.id == todo.id);
+  Future<void> _toggleDone(TodoOccurrence occurrence) async {
+    final idx = _todos.indexWhere((e) => e.id == occurrence.todo.id);
     if (idx < 0) {
       return;
     }
     setState(() {
-      _todos[idx] = _todos[idx].copyWith(
-        done: !_todos[idx].done,
-        updatedAt: DateTime.now(),
-      );
+      _todos[idx] = TodoRules.toggleDoneOnDate(_todos[idx], occurrence.date);
     });
     await _saveTodos();
   }
 
   Future<void> _showEditDialog({TodoItemV2? todo}) async {
     final titleController = TextEditingController(text: todo?.title ?? '');
-    DateTime selectedDate = _normalizeDate(todo?.date ?? _selectedDate);
+    DateTime selectedDate = TodoRules.normalize(todo?.date ?? _selectedDate);
     final selectedRepeat = <int>{...todo?.repeatWeekdays ?? const <int>[]};
 
     await showDialog(
@@ -141,7 +117,7 @@ class _TodoPageState extends State<TodoPage> {
                           return;
                         }
                         setDialogState(() {
-                          selectedDate = _normalizeDate(picked);
+                          selectedDate = TodoRules.normalize(picked);
                         });
                       },
                     ),
@@ -193,6 +169,7 @@ class _TodoPageState extends State<TodoPage> {
                             done: false,
                             date: selectedDate,
                             repeatWeekdays: selectedRepeat.toList()..sort(),
+                            completedDates: const [],
                             createdAt: now,
                             updatedAt: now,
                           ),
@@ -235,7 +212,7 @@ class _TodoPageState extends State<TodoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final displayTodos = _todosForSelectedDate();
+    final occurrences = TodoRules.resolveForDate(_todos, _selectedDate);
 
     return Scaffold(
       appBar: AppBar(
@@ -293,16 +270,17 @@ class _TodoPageState extends State<TodoPage> {
                   ),
                 ),
                 Expanded(
-                  child: displayTodos.isEmpty
+                  child: occurrences.isEmpty
                       ? const Center(child: Text('这一天暂无待办'))
                       : ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                          itemCount: displayTodos.length,
+                          itemCount: occurrences.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 10),
                           itemBuilder: (context, index) {
-                            final todo = displayTodos[index];
+                            final occurrence = occurrences[index];
+                            final todo = occurrence.todo;
                             return Dismissible(
-                              key: ValueKey(todo.id),
+                              key: ValueKey('${todo.id}_${occurrence.date.toIso8601String()}'),
                               direction: DismissDirection.endToStart,
                               onDismissed: (_) {
                                 _deleteTodo(todo);
@@ -330,8 +308,8 @@ class _TodoPageState extends State<TodoPage> {
                                     child: Row(
                                       children: [
                                         Checkbox(
-                                          value: todo.done,
-                                          onChanged: (_) => _toggleDone(todo),
+                                          value: occurrence.done,
+                                          onChanged: (_) => _toggleDone(occurrence),
                                         ),
                                         const SizedBox(width: 10),
                                         Expanded(
@@ -344,7 +322,7 @@ class _TodoPageState extends State<TodoPage> {
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
                                                   fontSize: 16,
-                                                  decoration: todo.done ? TextDecoration.lineThrough : null,
+                                                  decoration: occurrence.done ? TextDecoration.lineThrough : null,
                                                 ),
                                               ),
                                               const SizedBox(height: 6),
@@ -352,7 +330,7 @@ class _TodoPageState extends State<TodoPage> {
                                                 spacing: 6,
                                                 runSpacing: 6,
                                                 children: [
-                                                  _buildTag(context, _formatDate(_normalizeDate(todo.date))),
+                                                  _buildTag(context, _formatDate(TodoRules.normalize(todo.date))),
                                                   if (todo.repeatWeekdays.isNotEmpty)
                                                     ...todo.repeatWeekdays.map((e) => _buildTag(context, _weekdayLabel(e))),
                                                 ],

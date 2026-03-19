@@ -4,6 +4,7 @@ class TodoItemV2 {
   final bool done;
   final DateTime date;
   final List<int> repeatWeekdays;
+  final List<String> completedDates;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -13,6 +14,7 @@ class TodoItemV2 {
     required this.done,
     required this.date,
     required this.repeatWeekdays,
+    required this.completedDates,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -23,6 +25,7 @@ class TodoItemV2 {
     bool? done,
     DateTime? date,
     List<int>? repeatWeekdays,
+    List<String>? completedDates,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -32,6 +35,7 @@ class TodoItemV2 {
       done: done ?? this.done,
       date: date ?? this.date,
       repeatWeekdays: repeatWeekdays ?? this.repeatWeekdays,
+      completedDates: completedDates ?? this.completedDates,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -43,6 +47,7 @@ class TodoItemV2 {
     'done': done,
     'date': date.toIso8601String(),
     'repeatWeekdays': repeatWeekdays,
+    'completedDates': completedDates,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -51,12 +56,16 @@ class TodoItemV2 {
     final repeat = (json['repeatWeekdays'] as List<dynamic>? ?? const [])
         .map((e) => e as int)
         .toList();
+    final completed = (json['completedDates'] as List<dynamic>? ?? const [])
+        .map((e) => e as String)
+        .toList();
     return TodoItemV2(
       id: json['id'] as String,
       title: json['title'] as String,
       done: json['done'] as bool? ?? false,
       date: DateTime.parse(json['date'] as String),
       repeatWeekdays: repeat,
+      completedDates: completed,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );

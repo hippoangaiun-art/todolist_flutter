@@ -1,13 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:todolist/core/const.dart';
-import 'package:todolist/core/storage.dart';
-import 'dart:async';
-import 'package:todolist/pages/about.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:todolist/core/excel_importer.dart';
-import 'package:todolist/utils/permission.dart';
+import 'package:todolist/data/todo_repository.dart';
+import 'package:todolist/models/todo_item_v2.dart';
 
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
@@ -16,52 +10,98 @@ class TodoPage extends StatefulWidget {
   State<TodoPage> createState() => _TodoPageState();
 }
 
-class _TodoPageState extends State<TodoPage>
-    with SingleTickerProviderStateMixin {
-  late Future<List<Todo>> _futureTodos;
+class _TodoPageState extends State<TodoPage> {
+  final TodoRepository _repository = TodoRepository();
+  List<TodoItemV2> _todos = const [];
+  bool _loading = true;
+  DateTime _selectedDate = _normalizeDate(DateTime.now());
 
-  bool _incompleteExpanded = true;
-  bool _completedExpanded = false;
-
-  int _selectedIndex = 0;
+  static DateTime _normalizeDate(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
 
   @override
   void initState() {
     super.initState();
-    _futureTodos = fetchTodos();
+    _loadTodos();
   }
 
-  void _toggleDone(Todo todo, List<Todo> allTodos) {
+  Future<void> _loadTodos() async {
+    final todos = await _repository.fetchAll();
+    if (!mounted) {
+      return;
+    }
     setState(() {
-      final index = allTodos.indexOf(todo);
-      if (index >= 0) {
-        allTodos[index] = Todo(
-          title: todo.title,
-          done: !todo.done,
-          weekday: todo.weekday,
-          time: todo.time,
-        );
-      }
+      _todos = todos;
+      _loading = false;
     });
-    saveTodos(allTodos);
   }
 
-  String _formatDdl(Todo todo) {
-    if (todo.weekday == null && todo.time == null) return "";
-    const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
-    final dayStr = todo.weekday != null ? weekdays[todo.weekday! - 1] : "";
-    final timeStr = todo.time != null
-        ? "${todo.time!.hour.toString().padLeft(2, '0')}:${todo.time!.minute.toString().padLeft(2, '0')}"
-        : "";
-    if (dayStr.isNotEmpty && timeStr.isNotEmpty) return "$dayStr $timeStr";
-    return dayStr.isNotEmpty ? dayStr : timeStr;
+  Future<void> _saveTodos() async {
+    await _repository.saveAll(_todos);
   }
 
-  Future<void> _showTodoDialog(List<Todo> todos, {Todo? todo}) async {
-    final isEditing = todo != null;
-    final titleController = TextEditingController(text: todo?.title ?? "");
-    int? selectedWeekday = todo?.weekday; // 1-7
-    TimeOfDay? selectedTime = todo?.time;
+  bool _isSameDate(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  List<TodoItemV2> _todosForSelectedDate() {
+    return _todos.where((todo) {
+      if (todo.repeatWeekdays.isEmpty) {
+        return _isSameDate(_normalizeDate(todo.date), _selectedDate);
+      }
+      if (!_selectedDate.isBefore(_normalizeDate(todo.date)) &&
+          todo.repeatWeekdays.contains(_selectedDate.weekday)) {
+        return true;
+      }
+      return false;
+    }).toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _weekdayLabel(int weekday) {
+    const labels = ['一', '二', '三', '四', '五', '六', '日'];
+    return '周${labels[weekday - 1]}';
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      locale: const Locale('zh', 'CN'),
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      _selectedDate = _normalizeDate(picked);
+    });
+  }
+
+  Future<void> _toggleDone(TodoItemV2 todo) async {
+    final idx = _todos.indexWhere((e) => e.id == todo.id);
+    if (idx < 0) {
+      return;
+    }
+    setState(() {
+      _todos[idx] = _todos[idx].copyWith(
+        done: !_todos[idx].done,
+        updatedAt: DateTime.now(),
+      );
+    });
+    await _saveTodos();
+  }
+
+  Future<void> _showEditDialog({TodoItemV2? todo}) async {
+    final titleController = TextEditingController(text: todo?.title ?? '');
+    DateTime selectedDate = _normalizeDate(todo?.date ?? _selectedDate);
+    final selectedRepeat = <int>{...todo?.repeatWeekdays ?? const <int>[]};
 
     await showDialog(
       context: context,
@@ -69,141 +109,114 @@ class _TodoPageState extends State<TodoPage>
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(isEditing ? "编辑待办" : "添加待办"),
+              title: Text(todo == null ? '新增待办' : '编辑待办'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextField(
                       controller: titleController,
-                      maxLines: 3,
-                      minLines: 1,
                       decoration: const InputDecoration(
-                        labelText: "名称",
+                        labelText: '标题',
                         border: OutlineInputBorder(),
-                        hintText: "可使用换行输入多行内容",
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        const Text("截止时间:"),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 6,
-                              horizontal: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              selectedWeekday != null
-                                  ? ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][selectedWeekday! - 1]
-                                  : "未选择",
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ),
-                        ),
-                      ],
+                      maxLines: 3,
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: DropdownButton<int>(
-                            value: selectedWeekday,
-                            hint: const Text("选择星期"),
-                            isExpanded: true,
-                            items: List.generate(7, (index) {
-                              return DropdownMenuItem(
-                                value: index + 1,
-                                child: Text(
-                                  [
-                                    "周一",
-                                    "周二",
-                                    "周三",
-                                    "周四",
-                                    "周五",
-                                    "周六",
-                                    "周日",
-                                  ][index],
-                                ),
-                              );
-                            }),
-                            onChanged: (value) {
-                              setDialogState(() {
-                                selectedWeekday = value;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () async {
-                              final pickedTime = await showTimePicker(
-                                context: context,
-                                initialTime: selectedTime ?? TimeOfDay.now(),
-                              );
-                              if (pickedTime != null) {
-                                setDialogState(() {
-                                  selectedTime = pickedTime;
-                                });
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('日期'),
+                      subtitle: Text(_formatDate(selectedDate)),
+                      trailing: const Icon(Icons.calendar_month),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                          locale: const Locale('zh', 'CN'),
+                        );
+                        if (picked == null) {
+                          return;
+                        }
+                        setDialogState(() {
+                          selectedDate = _normalizeDate(picked);
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('每周重复'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: List.generate(7, (index) {
+                        final weekday = index + 1;
+                        final selected = selectedRepeat.contains(weekday);
+                        return FilterChip(
+                          label: Text(_weekdayLabel(weekday)),
+                          selected: selected,
+                          onSelected: (value) {
+                            setDialogState(() {
+                              if (value) {
+                                selectedRepeat.add(weekday);
+                              } else {
+                                selectedRepeat.remove(weekday);
                               }
-                            },
-                            child: Text(
-                              selectedTime != null
-                                  ? "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}"
-                                  : "选择时间",
-                            ),
-                          ),
-                        ),
-                      ],
+                            });
+                          },
+                        );
+                      }),
                     ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("取消"),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('取消'),
                 ),
-                TextButton(
-                  onPressed: () {
+                FilledButton(
+                  onPressed: () async {
                     final title = titleController.text.trim();
-                    if (title.isEmpty) return;
-
-                    if (isEditing) {
-                      final index = todos.indexOf(todo);
-                      if (index >= 0) {
-                        todos[index] = Todo(
-                          title: title,
-                          done: todo.done,
-                          weekday: selectedWeekday,
-                          time: selectedTime,
-                        );
-                      }
-                    } else {
-                      todos.add(
-                        Todo(
-                          title: title,
-                          done: false,
-                          weekday: selectedWeekday,
-                          time: selectedTime,
-                        ),
-                      );
+                    if (title.isEmpty) {
+                      return;
                     }
-
-                    setState(() {}); // 刷新 UI
-                    saveTodos(todos);
-                    Navigator.pop(context);
+                    final now = DateTime.now();
+                    setState(() {
+                      if (todo == null) {
+                        _todos = [
+                          TodoItemV2(
+                            id: now.microsecondsSinceEpoch.toString(),
+                            title: title,
+                            done: false,
+                            date: selectedDate,
+                            repeatWeekdays: selectedRepeat.toList()..sort(),
+                            createdAt: now,
+                            updatedAt: now,
+                          ),
+                          ..._todos,
+                        ];
+                      } else {
+                        final idx = _todos.indexWhere((e) => e.id == todo.id);
+                        if (idx >= 0) {
+                          _todos[idx] = _todos[idx].copyWith(
+                            title: title,
+                            date: selectedDate,
+                            repeatWeekdays: selectedRepeat.toList()..sort(),
+                            updatedAt: now,
+                          );
+                        }
+                      }
+                    });
+                    await _saveTodos();
+                    if (!context.mounted) {
+                      return;
+                    }
+                    Navigator.of(context).pop();
                   },
-                  child: Text(isEditing ? "保存" : "添加"),
+                  child: Text(todo == null ? '创建' : '保存'),
                 ),
               ],
             );
@@ -213,551 +226,173 @@ class _TodoPageState extends State<TodoPage>
     );
   }
 
-  Future<void> _showTodoOptionsDialog(Todo todo, List<Todo> todos) async {
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("操作"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text("删除待办"),
-                onTap: () {
-                  setState(() {
-                    todos.remove(todo);
-                  });
-                  saveTodos(todos);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("取消"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Excel 导入功能
-  Future<void> _importFromExcel(List<Todo> currentTodos) async {
-    try {
-      final granted = await checkStoragePermission();
-      if (!granted) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("请先授予存储权限")),
-        );
-        return;
-      }
-
-      // 选择文件
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['xls', 'xlsx'],
-      );
-
-      if (result == null) {
-        logger.w("用户取消了选择文件");
-        return;
-      }
-
-      final filePath = result.files.single.path;
-      if (filePath == null) {
-        logger.e("无法获取文件路径: ${result.files.single}");
-        return;
-      }
-
-      logger.e("成功获取文件路径$filePath");
-
-      // 显示加载对话框
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('正在导入课程表...'),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-
-      final file = File(filePath);
-      final bytes = await file.readAsBytes();
-
-      final importedTodos = await CourseImporter.importFromBytes(bytes);
-
-      // 合并到现有待办
-      final mergedTodos = CourseImporter.mergeWithExisting(
-        currentTodos,
-        importedTodos,
-      );
-
-      // 保存
-      await saveTodos(mergedTodos);
-
-      // 刷新数据
-      setState(() {
-        _futureTodos = fetchTodos();
-      });
-
-      // 关闭加载对话框
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      // 显示成功消息
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('成功导入 ${importedTodos.length} 门课程'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } catch (e,stackTrace) {
-
-      // 关闭加载对话框（如果存在）
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-
-      // 显示错误消息
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('导入失败'),
-          content: SingleChildScrollView(child: Text('错误详情：\n$e\n$stackTrace')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  Widget _buildTodoGroup(
-    String title,
-    bool expanded,
-    VoidCallback toggleExpanded,
-    List<Todo> groupTodos,
-    List<Todo> allTodos,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildGroupHeader(
-          title: title,
-          expanded: expanded,
-          onTap: toggleExpanded,
-        ),
-        AnimatedCrossFade(
-          firstChild: const SizedBox.shrink(),
-          secondChild: Column(
-            children: groupTodos.map((t) {
-              return Dismissible(
-                key: ValueKey(t.hashCode),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  color: Colors.red,
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                onDismissed: (direction) async {
-                  setState(() {
-                    allTodos.remove(t);
-                  });
-                  await saveTodos(allTodos);
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text("已删除待办: ${t.title}")));
-                },
-                child: _buildTodoCard(t, allTodos),
-              );
-            }).toList(),
-          ),
-          crossFadeState: expanded
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 300),
-          alignment: Alignment.topCenter,
-        ),
-      ],
-    );
-  }
-
-  // 默认选中今天的 weekday + 未指定
-  Set<int?> _selectedWeekdays = {
-    DateTime.now().weekday, // 1=周一 ... 7=周日
-    null, // 表示未指定
-  };
-
-  Widget _buildTodoCard(Todo todo, List<Todo> todos) {
-    final ddlText = _formatDdl(todo);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
-      child: Material(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _showTodoDialog(todos, todo: todo),
-          onLongPress: () => _showTodoOptionsDialog(todo, todos),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 72),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Checkbox(
-                  value: todo.done,
-                  onChanged: (_) => _toggleDone(todo, todos),
-                  fillColor: WidgetStateProperty.resolveWith<Color?>(
-                    (states) => todo.done ? Colors.grey : null,
-                  ),
-                  checkColor: Colors.white,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TweenAnimationBuilder<double>(
-                        tween: Tween<double>(begin: 0, end: todo.done ? 1 : 0),
-                        duration: const Duration(milliseconds: 300),
-                        builder: (context, value, child) {
-                          return Stack(
-                            children: [
-                              Text(
-                                todo.title,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.normal,
-                                  color: todo.done
-                                      ? Colors.grey
-                                      : Colors.black87,
-                                ),
-                              ),
-                              ClipRect(
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  widthFactor: value,
-                                  child: Text(
-                                    todo.title,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.normal,
-                                      color: Colors.grey,
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                      if (ddlText.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          ddlText,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[600],
-                            height: 1.2,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right, color: Colors.grey, size: 0),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGroupHeader({
-    required String title,
-    required bool expanded,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-      trailing: Icon(expanded ? Icons.expand_less : Icons.expand_more),
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildLoading() => const Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircularProgressIndicator(),
-        SizedBox(height: 20),
-        Text('正在拉取待办列表...'),
-      ],
-    ),
-  );
-
-  Widget _buildError(Object error) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 50),
-          const SizedBox(height: 20),
-          const Text('拉取待办列表失败', style: TextStyle(fontSize: 18)),
-          const SizedBox(height: 10),
-          Text(
-            error.toString(),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _futureTodos = fetchTodos();
-              });
-            },
-            child: const Text('重试'),
-          ),
-        ],
-      ),
-    ),
-  );
-
-  Future<void> _showWeekdayFilterDialog() async {
-    final tempSelection = Set<int?>.from(_selectedWeekdays);
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("选择要显示的星期"),
-          content: StatefulBuilder(
-            builder: (context, setDialogState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ...List.generate(7, (index) {
-                    int weekday = index + 1; // 1=周一
-                    return CheckboxListTile(
-                      title: Text(
-                        "周${["一", "二", "三", "四", "五", "六", "日"][index]}",
-                      ),
-                      value: tempSelection.contains(weekday),
-                      onChanged: (checked) {
-                        setDialogState(() {
-                          if (checked == true) {
-                            tempSelection.add(weekday);
-                          } else {
-                            tempSelection.remove(weekday);
-                          }
-                        });
-                      },
-                    );
-                  }),
-                  CheckboxListTile(
-                    title: const Text("未指定"),
-                    value: tempSelection.contains(null),
-                    onChanged: (checked) {
-                      setDialogState(() {
-                        if (checked == true) {
-                          tempSelection.add(null);
-                        } else {
-                          tempSelection.remove(null);
-                        }
-                      });
-                    },
-                  ),
-                ],
-              );
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("取消"),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _selectedWeekdays = tempSelection;
-                });
-                Navigator.pop(context);
-              },
-              child: const Text("确定"),
-            ),
-          ],
-        );
-      },
-    );
+  Future<void> _deleteTodo(TodoItemV2 todo) async {
+    setState(() {
+      _todos.removeWhere((e) => e.id == todo.id);
+    });
+    await _saveTodos();
   }
 
   @override
   Widget build(BuildContext context) {
+    final displayTodos = _todosForSelectedDate();
+
     return Scaffold(
       appBar: AppBar(
         title: Text(Const.appName),
-        actions: _selectedIndex == 0
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.filter_list),
-                  tooltip: "按星期过滤",
-                  onPressed: _showWeekdayFilterDialog,
-                ),
-              ]
-            : null,
       ),
-      body: SafeArea(
-        child: FutureBuilder<List<Todo>>(
-          future: _futureTodos,
-          builder: (context, snapshot) {
-            if (_selectedIndex == 0) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return _buildLoading();
-              } else if (snapshot.hasError) {
-                return _buildError(snapshot.error!);
-              }
-
-              final todos = snapshot.data ?? [];
-              if (todos.isEmpty) return const Center(child: Text("暂无TODO"));
-              final filteredTodos = todos.where((t) {
-                if (t.weekday == null) return _selectedWeekdays.contains(null);
-                return _selectedWeekdays.contains(t.weekday);
-              }).toList();
-
-              final incompleteTodos = filteredTodos
-                  .where((t) => !t.done)
-                  .toList();
-              final completedTodos = filteredTodos
-                  .where((t) => t.done)
-                  .toList();
-
-              return ListView(
-                children: [
-                  _buildTodoGroup(
-                    "未完成",
-                    _incompleteExpanded,
-                    () => setState(
-                      () => _incompleteExpanded = !_incompleteExpanded,
-                    ),
-                    incompleteTodos,
-                    todos,
-                  ),
-                  _buildTodoGroup(
-                    "已完成",
-                    _completedExpanded,
-                    () => setState(
-                      () => _completedExpanded = !_completedExpanded,
-                    ),
-                    completedTodos,
-                    todos,
-                  ),
-                ],
-              );
-            } else {
-              return const AboutPage();
-            }
-          },
-        ),
-      ),
-      floatingActionButton: _selectedIndex == 0
-          ? FutureBuilder<List<Todo>>(
-              future: _futureTodos,
-              builder: (context, snapshot) {
-                final todos = snapshot.data ?? [];
-                return FloatingActionButton(
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(16),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+                          });
+                        },
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: _pickDate,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.today_outlined, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${_formatDate(_selectedDate)} ${_weekdayLabel(_selectedDate.weekday)}',
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      builder: (context) {
-                        return SafeArea(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ListTile(
-                                leading: const Icon(Icons.edit),
-                                title: const Text("手工录入"),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _showTodoDialog(todos);
-                                },
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedDate = _selectedDate.add(const Duration(days: 1));
+                          });
+                        },
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: displayTodos.isEmpty
+                      ? const Center(child: Text('这一天暂无待办'))
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                          itemCount: displayTodos.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final todo = displayTodos[index];
+                            return Dismissible(
+                              key: ValueKey(todo.id),
+                              direction: DismissDirection.endToStart,
+                              onDismissed: (_) {
+                                _deleteTodo(todo);
+                              },
+                              background: Container(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.error,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 16),
+                                child: Icon(
+                                  Icons.delete,
+                                  color: Theme.of(context).colorScheme.onError,
+                                ),
                               ),
-                              ListTile(
-                                leading: const Icon(Icons.upload_file),
-                                title: const Text("从 Excel 导入课表"),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _importFromExcel(todos);
-                                },
+                              child: Material(
+                                color: Theme.of(context).colorScheme.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(14),
+                                child: InkWell(
+                                  onTap: () => _showEditDialog(todo: todo),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          value: todo.done,
+                                          onChanged: (_) => _toggleDone(todo),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                todo.title,
+                                                maxLines: 3,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  decoration: todo.done ? TextDecoration.lineThrough : null,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Wrap(
+                                                spacing: 6,
+                                                runSpacing: 6,
+                                                children: [
+                                                  _buildTag(context, _formatDate(_normalizeDate(todo.date))),
+                                                  if (todo.repeatWeekdays.isNotEmpty)
+                                                    ...todo.repeatWeekdays.map((e) => _buildTag(context, _weekdayLabel(e))),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Icon(Icons.chevron_right),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
-                              const SizedBox(height: 8),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  child: const Icon(Icons.add),
-                );
-              },
-            )
-          : null,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) =>
-            setState(() => _selectedIndex = index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.list_alt_outlined),
-            selectedIcon: Icon(Icons.list_alt),
-            label: "待办",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.info_outlined),
-            selectedIcon: Icon(Icons.info_outlined),
-            label: "关于",
-          ),
-        ],
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showEditDialog(),
+        icon: const Icon(Icons.add),
+        label: const Text('新增待办'),
+      ),
+    );
+  }
+
+  Widget _buildTag(BuildContext context, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: Theme.of(context).colorScheme.secondaryContainer,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.onSecondaryContainer,
+        ),
       ),
     );
   }

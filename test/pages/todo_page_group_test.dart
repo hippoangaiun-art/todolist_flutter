@@ -6,9 +6,9 @@ import 'package:todolist/pages/todo.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('点击未完成分组标题后可折叠列表', (tester) async {
+  testWidgets('待办页可正常渲染并显示新增入口', (tester) async {
     SharedPreferences.setMockInitialValues({
-      'todolist': '[{"title":"测试待办","done":false}]',
+      'todos_v2': '[]',
     });
 
     await tester.pumpWidget(
@@ -18,12 +18,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.expand_less), findsOneWidget);
-
-    await tester.tap(find.text('未完成'));
-    await tester.pumpAndSettle();
-
-    expect(find.byIcon(Icons.expand_less), findsNothing);
-    expect(find.byIcon(Icons.expand_more), findsNWidgets(2));
+    expect(find.text('新增待办'), findsOneWidget);
+    expect(find.text('这一天暂无待办'), findsOneWidget);
   });
 }

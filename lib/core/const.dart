@@ -1,25 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:logger/logger.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:todolist/utils/preferences.dart';
 
 final logger = Logger();
 
 Future<int> getAppVersionCode() async {
-  PackageInfo packageInfo = await PackageInfo.fromPlatform();
-  return int.parse(packageInfo.version); // 构建号（如 12）
+  final packageInfo = await PackageInfo.fromPlatform();
+  return int.parse(packageInfo.version);
 }
 
-
-
-Future<void> checkUpdate() async {
-  //TODO 写检查更新
-}
+Future<void> checkUpdate() async {}
 
 class Todo {
   final String title;
   final bool done;
-  final int? weekday; // 1=周一, 7=周日
+  final int? weekday;
   final TimeOfDay? time;
 
   Todo({
@@ -29,7 +25,6 @@ class Todo {
     this.time,
   });
 
-  // json 序列化
   Map<String, dynamic> toJson() => {
     'title': title,
     'done': done,
@@ -40,31 +35,24 @@ class Todo {
 
   factory Todo.fromJson(Map<String, dynamic> json) {
     return Todo(
-      title: json['title'],
-      done: json['done'],
-      weekday: json['weekday'],
+      title: json['title'] as String,
+      done: json['done'] as bool? ?? false,
+      weekday: json['weekday'] as int?,
       time: (json['hour'] != null && json['minute'] != null)
-          ? TimeOfDay(hour: json['hour'], minute: json['minute'])
+          ? TimeOfDay(hour: json['hour'] as int, minute: json['minute'] as int)
           : null,
     );
   }
 }
 
-
 class Const {
-  static final githubUrl = "https://github.com/hippoangaiun-art/todolist_flutter";
-  static final todoLists = PrefField<String>("todolist", """
-  [
-  {
-    "title": "Welcome",
-    "done": false,
-    "weekday": 1,
-    "hour": 9,
-    "minute": 0
-  }
-]
+  static final githubUrl = 'https://github.com/hippoangaiun-art/todolist_flutter';
 
-  """);
+  static final todoLists = PrefField<String>('todolist', '[{"title":"Welcome","done":false,"weekday":1,"hour":9,"minute":0}]');
+  static final todoListV2 = PrefField<String>('todos_v2', '[]');
+  static final scheduleCourses = PrefField<String>('schedule_courses_v1', '[]');
+  static final scheduleSections = PrefField<String>('schedule_sections_v1', '[]');
+  static final scheduleSettings = PrefField<String>('schedule_settings_v1', '{}');
 
-  static final appName = "ToDo List";
+  static final appName = 'ToDo List';
 }

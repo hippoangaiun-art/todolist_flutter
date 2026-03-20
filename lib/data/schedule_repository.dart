@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:todolist/core/const.dart';
+import 'package:todolist/models/course.dart';
 import 'package:todolist/models/section_slot.dart';
 
 class ScheduleRepository {
@@ -19,6 +20,20 @@ class ScheduleRepository {
   Future<void> saveSections(List<SectionSlot> sections) async {
     final payload = jsonEncode(sections.map((e) => e.toJson()).toList());
     await Const.scheduleSections.setValue(payload);
+  }
+
+  Future<List<Course>> fetchCourses() async {
+    final raw = await Const.scheduleCourses.value;
+    if (raw.trim().isEmpty || raw.trim() == '[]') {
+      return [];
+    }
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded.map((e) => Course.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> saveCourses(List<Course> courses) async {
+    final payload = jsonEncode(courses.map((e) => e.toJson()).toList());
+    await Const.scheduleCourses.setValue(payload);
   }
 
   List<SectionSlot> defaultSections() {

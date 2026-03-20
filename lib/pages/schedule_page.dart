@@ -1,4 +1,8 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:todolist/core/excel_importer.dart';
 import 'package:todolist/data/schedule_repository.dart';
 import 'package:todolist/models/course.dart';
 import 'package:todolist/models/schedule_settings.dart';
@@ -6,6 +10,7 @@ import 'package:todolist/models/section_slot.dart';
 import 'package:todolist/pages/course_editor_page.dart';
 import 'package:todolist/pages/schedule_settings_page.dart';
 import 'package:todolist/pages/section_config_page.dart';
+import 'package:todolist/utils/permission.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
@@ -102,29 +107,105 @@ class _SchedulePageState extends State<SchedulePage> {
     await _repository.saveSettings(next);
   }
 
-  Future<void> _prepareImportSettings() async {
+  Future<DateTime?> _ensureFirstWeekDate() async {
+    if (_settings.firstWeekDate != null) {
+      return _settings.firstWeekDate;
+    }
     final picked = await showDatePicker(
       context: context,
-      initialDate: _settings.firstWeekDate ?? DateTime.now(),
+      initialDate: DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
       locale: const Locale('zh', 'CN'),
       helpText: '导入前设置第一周日期',
     );
     if (picked == null) {
-      return;
+      return null;
     }
     final next = _settings.copyWith(firstWeekDate: DateTime(picked.year, picked.month, picked.day));
     setState(() {
       _settings = next;
     });
     await _repository.saveSettings(next);
+    return next.firstWeekDate;
+  }
+
+  Future<void> _importFromExcel() async {
+    final firstWeekDate = await _ensureFirstWeekDate();
+    if (firstWeekDate == null) {
+      return;
+    }
+
+    final granted = await checkStoragePermission();
+    if (!granted) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先授予存储权限')),
+      );
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xls', 'xlsx'],
+    );
+
+    if (result == null || result.files.single.path == null) {
+      return;
+    }
+
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已设置第一周日期，下一步将接入导入解析')),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
+
+    try {
+      final file = File(result.files.single.path!);
+      final bytes = await file.readAsBytes();
+      final imported = await CourseExcelImporter.importFromBytes(
+        bytes: bytes,
+        sections: _sections,
+      );
+
+      setState(() {
+        _courses = [..._courses, ...imported];
+      });
+      await _saveCourses();
+
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已导入 ${imported.length} 门课程（第一周：${_formatDate(firstWeekDate)}）')),
+      );
+    } catch (e) {
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      if (!mounted) {
+        return;
+      }
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('导入失败'),
+          content: Text(e.toString()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _deleteCourse(Course course) async {
@@ -180,9 +261,9 @@ class _SchedulePageState extends State<SchedulePage> {
                 ),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
-                  onPressed: _prepareImportSettings,
+                  onPressed: _importFromExcel,
                   icon: const Icon(Icons.upload_file),
-                  label: const Text('导入课表前设置第一周日期'),
+                  label: const Text('从 Excel 导入课表'),
                 ),
                 const SizedBox(height: 16),
                 Row(

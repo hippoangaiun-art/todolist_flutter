@@ -1,74 +1,27 @@
-import 'package:flutter/material.dart';
+import 'package:excel/excel.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:todolist/core/const.dart';
 import 'package:todolist/core/excel_importer.dart';
+import 'package:todolist/models/section_slot.dart';
 
 void main() {
-  group('CourseImporter.mergeWithExisting', () {
-    test('相同星期、时间、标题时应去重', () {
-      final existing = [
-        Todo(
-          title: '高等数学 教一-101',
-          done: false,
-          weekday: 1,
-          time: const TimeOfDay(hour: 8, minute: 0),
-        ),
-      ];
-      final imported = [
-        Todo(
-          title: '高等数学 教一-101',
-          done: false,
-          weekday: 1,
-          time: const TimeOfDay(hour: 8, minute: 0),
-        ),
-      ];
+  test('Excel 导入可解析课程为 Course 列表', () async {
+    final excel = Excel.createExcel();
+    final sheet = excel.tables[excel.tables.keys.first]!;
 
-      final merged = CourseImporter.mergeWithExisting(existing, imported);
-      expect(merged.length, 1);
-    });
+    sheet.cell(CellIndex.indexByString('A1')).value = TextCellValue('节次');
+    sheet.cell(CellIndex.indexByString('B1')).value = TextCellValue('星期一');
+    sheet.cell(CellIndex.indexByString('A2')).value = TextCellValue('1');
+    sheet.cell(CellIndex.indexByString('B2')).value = TextCellValue('高等数学\n1-18周\n教一-101');
 
-    test('同名但不同时间应保留', () {
-      final existing = [
-        Todo(
-          title: '大学英语 教三-202',
-          done: false,
-          weekday: 2,
-          time: const TimeOfDay(hour: 8, minute: 0),
-        ),
-      ];
-      final imported = [
-        Todo(
-          title: '大学英语 教三-202',
-          done: false,
-          weekday: 2,
-          time: const TimeOfDay(hour: 9, minute: 50),
-        ),
-      ];
+    final bytes = excel.encode()!;
+    final sections = [
+      const SectionSlot(number: 1, startMinutes: 480, endMinutes: 525),
+    ];
 
-      final merged = CourseImporter.mergeWithExisting(existing, imported);
-      expect(merged.length, 2);
-    });
+    final courses = await CourseExcelImporter.importFromBytes(bytes: bytes, sections: sections);
 
-    test('同名同时间但不同星期应保留', () {
-      final existing = [
-        Todo(
-          title: '线性代数 教二-305',
-          done: false,
-          weekday: 3,
-          time: const TimeOfDay(hour: 10, minute: 40),
-        ),
-      ];
-      final imported = [
-        Todo(
-          title: '线性代数 教二-305',
-          done: false,
-          weekday: 5,
-          time: const TimeOfDay(hour: 10, minute: 40),
-        ),
-      ];
-
-      final merged = CourseImporter.mergeWithExisting(existing, imported);
-      expect(merged.length, 2);
-    });
+    expect(courses.isNotEmpty, true);
+    expect(courses.first.name, '高等数学');
+    expect(courses.first.meetings.first.weekday, 1);
   });
 }

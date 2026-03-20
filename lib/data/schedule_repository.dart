@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:todolist/core/const.dart';
 import 'package:todolist/models/course.dart';
+import 'package:todolist/models/schedule_settings.dart';
 import 'package:todolist/models/section_slot.dart';
 
 class ScheduleRepository {
@@ -34,6 +35,18 @@ class ScheduleRepository {
   Future<void> saveCourses(List<Course> courses) async {
     final payload = jsonEncode(courses.map((e) => e.toJson()).toList());
     await Const.scheduleCourses.setValue(payload);
+  }
+
+  Future<ScheduleSettings> fetchSettings() async {
+    final raw = await Const.scheduleSettings.value;
+    if (raw.trim().isEmpty || raw.trim() == '{}') {
+      return const ScheduleSettings(firstWeekDate: null);
+    }
+    return ScheduleSettings.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+  }
+
+  Future<void> saveSettings(ScheduleSettings settings) async {
+    await Const.scheduleSettings.setValue(jsonEncode(settings.toJson()));
   }
 
   List<SectionSlot> defaultSections() {

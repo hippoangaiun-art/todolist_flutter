@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:todolist/data/schedule_repository.dart';
 import 'package:todolist/models/course.dart';
+import 'package:todolist/models/schedule_settings.dart';
 import 'package:todolist/models/section_slot.dart';
 import 'package:todolist/pages/course_editor_page.dart';
+import 'package:todolist/pages/schedule_settings_page.dart';
 import 'package:todolist/pages/section_config_page.dart';
 
 class SchedulePage extends StatefulWidget {
@@ -16,6 +18,7 @@ class _SchedulePageState extends State<SchedulePage> {
   final ScheduleRepository _repository = ScheduleRepository();
   List<SectionSlot> _sections = const [];
   List<Course> _courses = const [];
+  ScheduleSettings _settings = const ScheduleSettings(firstWeekDate: null);
   bool _loading = true;
 
   @override
@@ -27,12 +30,14 @@ class _SchedulePageState extends State<SchedulePage> {
   Future<void> _load() async {
     final sections = await _repository.fetchSections();
     final courses = await _repository.fetchCourses();
+    final settings = await _repository.fetchSettings();
     if (!mounted) {
       return;
     }
     setState(() {
       _sections = sections;
       _courses = courses;
+      _settings = settings;
       _loading = false;
     });
   }
@@ -48,6 +53,13 @@ class _SchedulePageState extends State<SchedulePage> {
 
   String _meetingText(CourseMeeting meeting) {
     return '${_weekdayLabel(meeting.weekday)} 第${meeting.startSection}-${meeting.endSection}节 ${meeting.weekStart}-${meeting.weekEnd}周';
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) {
+      return '未设置';
+    }
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   Future<void> _openEditor({Course? course}) async {
@@ -75,6 +87,46 @@ class _SchedulePageState extends State<SchedulePage> {
     await _saveCourses();
   }
 
+  Future<void> _openSettings() async {
+    final next = await Navigator.of(context).push<ScheduleSettings>(
+      MaterialPageRoute(
+        builder: (_) => ScheduleSettingsPage(initial: _settings),
+      ),
+    );
+    if (next == null) {
+      return;
+    }
+    setState(() {
+      _settings = next;
+    });
+    await _repository.saveSettings(next);
+  }
+
+  Future<void> _prepareImportSettings() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _settings.firstWeekDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      locale: const Locale('zh', 'CN'),
+      helpText: '导入前设置第一周日期',
+    );
+    if (picked == null) {
+      return;
+    }
+    final next = _settings.copyWith(firstWeekDate: DateTime(picked.year, picked.month, picked.day));
+    setState(() {
+      _settings = next;
+    });
+    await _repository.saveSettings(next);
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已设置第一周日期，下一步将接入导入解析')),
+    );
+  }
+
   Future<void> _deleteCourse(Course course) async {
     setState(() {
       _courses = _courses.where((e) => e.id != course.id).toList();
@@ -87,12 +139,30 @@ class _SchedulePageState extends State<SchedulePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('课表'),
+        actions: [
+          IconButton(
+            onPressed: _openSettings,
+            icon: const Icon(Icons.tune),
+            tooltip: '课表设置',
+          ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                Material(
+                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(16),
+                  child: ListTile(
+                    title: const Text('第一周对应日期'),
+                    subtitle: Text(_formatDate(_settings.firstWeekDate)),
+                    trailing: const Icon(Icons.edit_calendar),
+                    onTap: _openSettings,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Material(
                   color: Theme.of(context).colorScheme.surfaceContainer,
                   borderRadius: BorderRadius.circular(16),
@@ -107,6 +177,12 @@ class _SchedulePageState extends State<SchedulePage> {
                       await _load();
                     },
                   ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.tonalIcon(
+                  onPressed: _prepareImportSettings,
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('导入课表前设置第一周日期'),
                 ),
                 const SizedBox(height: 16),
                 Row(

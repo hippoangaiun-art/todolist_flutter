@@ -174,7 +174,7 @@ class _SchedulePageState extends State<SchedulePage> {
       );
 
       setState(() {
-        _courses = [..._courses, ...imported];
+        _courses = CourseExcelImporter.mergeWithExisting(_courses, imported);
       });
       await _saveCourses();
 

@@ -25,12 +25,15 @@ class _SchedulePageState extends State<SchedulePage> {
   List<Course> _courses = const [];
   ScheduleSettings _settings = const ScheduleSettings(firstWeekDate: null);
   bool _loading = true;
+  int _selectedWeek = 1;
 
   @override
   void initState() {
     super.initState();
     _load();
   }
+
+  DateTime _normalize(DateTime date) => DateTime(date.year, date.month, date.day);
 
   Future<void> _load() async {
     final sections = await _repository.fetchSections();
@@ -39,16 +42,29 @@ class _SchedulePageState extends State<SchedulePage> {
     if (!mounted) {
       return;
     }
+    final currentWeek = _resolveWeekFromDate(DateTime.now(), settings);
     setState(() {
       _sections = sections;
       _courses = courses;
       _settings = settings;
+      _selectedWeek = currentWeek;
       _loading = false;
     });
   }
 
   Future<void> _saveCourses() async {
     await _repository.saveCourses(_courses);
+  }
+
+  int _resolveWeekFromDate(DateTime date, ScheduleSettings settings) {
+    if (settings.firstWeekDate == null) {
+      return 1;
+    }
+    final diff = _normalize(date).difference(_normalize(settings.firstWeekDate!)).inDays;
+    if (diff < 0) {
+      return 1;
+    }
+    return diff ~/ 7 + 1;
   }
 
   String _weekdayLabel(int weekday) {
@@ -101,8 +117,10 @@ class _SchedulePageState extends State<SchedulePage> {
     if (next == null) {
       return;
     }
+    final week = _resolveWeekFromDate(DateTime.now(), next);
     setState(() {
       _settings = next;
+      _selectedWeek = week;
     });
     await _repository.saveSettings(next);
   }
@@ -125,6 +143,7 @@ class _SchedulePageState extends State<SchedulePage> {
     final next = _settings.copyWith(firstWeekDate: DateTime(picked.year, picked.month, picked.day));
     setState(() {
       _settings = next;
+      _selectedWeek = _resolveWeekFromDate(DateTime.now(), next);
     });
     await _repository.saveSettings(next);
     return next.firstWeekDate;
@@ -208,11 +227,66 @@ class _SchedulePageState extends State<SchedulePage> {
     }
   }
 
+  Future<void> _goToDate() async {
+    if (_settings.firstWeekDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先设置第一周日期再进行日期定位')),
+      );
+      return;
+    }
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      locale: const Locale('zh', 'CN'),
+      helpText: '定位到对应周次',
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      _selectedWeek = _resolveWeekFromDate(picked, _settings);
+    });
+  }
+
+  void _goToCurrentWeek() {
+    setState(() {
+      _selectedWeek = _resolveWeekFromDate(DateTime.now(), _settings);
+    });
+  }
+
   Future<void> _deleteCourse(Course course) async {
     setState(() {
       _courses = _courses.where((e) => e.id != course.id).toList();
     });
     await _saveCourses();
+  }
+
+  DateTime? _weekdayDateInWeek(int weekday) {
+    final firstWeekDate = _settings.firstWeekDate;
+    if (firstWeekDate == null) {
+      return null;
+    }
+    final start = _normalize(firstWeekDate).add(Duration(days: (_selectedWeek - 1) * 7));
+    return start.add(Duration(days: weekday - 1));
+  }
+
+  List<_ScheduleEntry> _entriesForWeekday(int weekday) {
+    final entries = <_ScheduleEntry>[];
+    for (final course in _courses) {
+      for (final meeting in course.meetings) {
+        if (meeting.weekday != weekday) {
+          continue;
+        }
+        if (_selectedWeek < meeting.weekStart || _selectedWeek > meeting.weekEnd) {
+          continue;
+        }
+        entries.add(_ScheduleEntry(course: course, meeting: meeting));
+      }
+    }
+    entries.sort((a, b) => a.meeting.startSection.compareTo(b.meeting.startSection));
+    return entries;
   }
 
   @override
@@ -264,6 +338,130 @@ class _SchedulePageState extends State<SchedulePage> {
                   onPressed: _importFromExcel,
                   icon: const Icon(Icons.upload_file),
                   label: const Text('从 Excel 导入课表'),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedWeek = (_selectedWeek - 1).clamp(1, 30);
+                        });
+                      },
+                      icon: const Icon(Icons.chevron_left),
+                    ),
+                    Expanded(
+                      child: Text(
+                        '第 $_selectedWeek 周',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedWeek = (_selectedWeek + 1).clamp(1, 30);
+                        });
+                      },
+                      icon: const Icon(Icons.chevron_right),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _goToCurrentWeek,
+                        icon: const Icon(Icons.my_location),
+                        label: const Text('回到本周'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _goToDate,
+                        icon: const Icon(Icons.search),
+                        label: const Text('日期定位'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 420,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: List.generate(7, (index) {
+                        final weekday = index + 1;
+                        final date = _weekdayDateInWeek(weekday);
+                        final entries = _entriesForWeekday(weekday);
+                        return Container(
+                          width: 190,
+                          margin: const EdgeInsets.only(right: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: Theme.of(context).colorScheme.surfaceContainerLow,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _weekdayLabel(weekday),
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatDate(date),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Expanded(
+                                  child: entries.isEmpty
+                                      ? const Center(child: Text('无课程'))
+                                      : ListView.separated(
+                                          itemCount: entries.length,
+                                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                                          itemBuilder: (context, i) {
+                                            final entry = entries[i];
+                                            return Container(
+                                              padding: const EdgeInsets.all(10),
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(12),
+                                                color: Theme.of(context).colorScheme.secondaryContainer,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    entry.course.name,
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text('第${entry.meeting.startSection}-${entry.meeting.endSection}节', style: const TextStyle(fontSize: 12)),
+                                                  if (entry.course.classroom.isNotEmpty)
+                                                    Text(entry.course.classroom, style: const TextStyle(fontSize: 12)),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -332,4 +530,14 @@ class _SchedulePageState extends State<SchedulePage> {
             ),
     );
   }
+}
+
+class _ScheduleEntry {
+  final Course course;
+  final CourseMeeting meeting;
+
+  const _ScheduleEntry({
+    required this.course,
+    required this.meeting,
+  });
 }

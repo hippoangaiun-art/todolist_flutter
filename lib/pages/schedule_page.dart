@@ -11,6 +11,7 @@ import 'package:todolist/pages/course_editor_page.dart';
 import 'package:todolist/pages/schedule_settings_page.dart';
 import 'package:todolist/pages/section_config_page.dart';
 import 'package:todolist/utils/permission.dart';
+import 'package:todolist/widgets/gradient_background.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
@@ -294,6 +295,7 @@ class _SchedulePageState extends State<SchedulePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('课表'),
+        backgroundColor: Colors.transparent,
         actions: [
           IconButton(
             onPressed: _openSettings,
@@ -302,29 +304,38 @@ class _SchedulePageState extends State<SchedulePage> {
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Material(
-                  color: Theme.of(context).colorScheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(16),
-                  child: ListTile(
-                    title: const Text('第一周对应日期'),
-                    subtitle: Text(_formatDate(_settings.firstWeekDate)),
-                    trailing: const Icon(Icons.edit_calendar),
-                    onTap: _openSettings,
+      body: GradientBackground(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _actionCard(
+                          icon: Icons.edit_calendar,
+                          title: '第一周日期',
+                          subtitle: _formatDate(_settings.firstWeekDate),
+                          onTap: _openSettings,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _actionCard(
+                          icon: Icons.upload_file,
+                          title: '导入课表',
+                          subtitle: 'Excel 文件',
+                          onTap: _importFromExcel,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                Material(
-                  color: Theme.of(context).colorScheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(16),
-                  child: ListTile(
-                    title: const Text('节次设置'),
-                    subtitle: Text(_sections.isEmpty ? '尚未配置节次' : '已配置 ${_sections.length} 节，点击编辑开始/结束/时长'),
-                    trailing: const Icon(Icons.chevron_right),
+                  const SizedBox(height: 10),
+                  _actionCard(
+                    icon: Icons.schedule,
+                    title: '节次设置',
+                    subtitle: _sections.isEmpty ? '尚未配置节次' : '已配置 ${_sections.length} 节，点击编辑',
                     onTap: () async {
                       await Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const SectionConfigPage()),
@@ -332,202 +343,243 @@ class _SchedulePageState extends State<SchedulePage> {
                       await _load();
                     },
                   ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.tonalIcon(
-                  onPressed: _importFromExcel,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('从 Excel 导入课表'),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _selectedWeek = (_selectedWeek - 1).clamp(1, 30);
-                        });
-                      },
-                      icon: const Icon(Icons.chevron_left),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    Expanded(
-                      child: Text(
-                        '第 $_selectedWeek 周',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _selectedWeek = (_selectedWeek + 1).clamp(1, 30);
-                        });
-                      },
-                      icon: const Icon(Icons.chevron_right),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _goToCurrentWeek,
-                        icon: const Icon(Icons.my_location),
-                        label: const Text('回到本周'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _goToDate,
-                        icon: const Icon(Icons.search),
-                        label: const Text('日期定位'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 420,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: List.generate(7, (index) {
-                        final weekday = index + 1;
-                        final date = _weekdayDateInWeek(weekday);
-                        final entries = _entriesForWeekday(weekday);
-                        return Container(
-                          width: 190,
-                          margin: const EdgeInsets.only(right: 10),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: Theme.of(context).colorScheme.surfaceContainerLow,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _weekdayLabel(weekday),
-                                  style: const TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _formatDate(date),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Expanded(
-                                  child: entries.isEmpty
-                                      ? const Center(child: Text('无课程'))
-                                      : ListView.separated(
-                                          itemCount: entries.length,
-                                          separatorBuilder: (_, _) => const SizedBox(height: 8),
-                                          itemBuilder: (context, i) {
-                                            final entry = entries[i];
-                                            return Container(
-                                              padding: const EdgeInsets.all(10),
-                                              decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(12),
-                                                color: Theme.of(context).colorScheme.secondaryContainer,
-                                              ),
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    entry.course.name,
-                                                    maxLines: 2,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: const TextStyle(fontWeight: FontWeight.w600),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text('第${entry.meeting.startSection}-${entry.meeting.endSection}节', style: const TextStyle(fontSize: 12)),
-                                                  if (entry.course.classroom.isNotEmpty)
-                                                    Text(entry.course.classroom, style: const TextStyle(fontSize: 12)),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('课程列表', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    FilledButton.tonalIcon(
-                      onPressed: () => _openEditor(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('新增课程'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (_courses.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Text('暂无课程，点击右上角新增'),
-                  )
-                else
-                  ..._courses.map(
-                    (course) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Material(
-                        color: Theme.of(context).colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(16),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () => _openEditor(course: course),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        course.name,
-                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () => _deleteCourse(course),
-                                      icon: const Icon(Icons.delete_outline),
-                                    ),
-                                  ],
-                                ),
-                                if (course.classroom.isNotEmpty || course.location.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 6),
-                                    child: Text('${course.classroom}  ${course.location}'.trim()),
-                                  ),
-                                ...course.meetings.map((m) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 4),
-                                      child: Text(_meetingText(m), style: const TextStyle(fontSize: 13)),
-                                    )),
-                              ],
-                            ),
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedWeek = (_selectedWeek - 1).clamp(1, 30);
+                            });
+                          },
+                          icon: const Icon(Icons.chevron_left),
+                        ),
+                        Expanded(
+                          child: Text(
+                            '第 $_selectedWeek 周',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                           ),
                         ),
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedWeek = (_selectedWeek + 1).clamp(1, 30);
+                            });
+                          },
+                          icon: const Icon(Icons.chevron_right),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _goToCurrentWeek,
+                          icon: const Icon(Icons.my_location),
+                          label: const Text('回到本周'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _goToDate,
+                          icon: const Icon(Icons.search),
+                          label: const Text('日期定位'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 420,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: List.generate(7, (index) {
+                          final weekday = index + 1;
+                          final date = _weekdayDateInWeek(weekday);
+                          final entries = _entriesForWeekday(weekday);
+                          return Container(
+                            width: 190,
+                            margin: const EdgeInsets.only(right: 10),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: Colors.white.withValues(alpha: 0.85),
+                              boxShadow: const [
+                                BoxShadow(color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 6)),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(_weekdayLabel(weekday), style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatDate(date),
+                                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    child: entries.isEmpty
+                                        ? const Center(child: Text('无课程'))
+                                        : ListView.separated(
+                                            itemCount: entries.length,
+                                            separatorBuilder: (_, _) => const SizedBox(height: 8),
+                                            itemBuilder: (context, i) {
+                                              final entry = entries[i];
+                                              return Container(
+                                                padding: const EdgeInsets.all(10),
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  color: Theme.of(context).colorScheme.secondaryContainer,
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      entry.course.name,
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text('第${entry.meeting.startSection}-${entry.meeting.endSection}节', style: const TextStyle(fontSize: 12)),
+                                                    if (entry.course.classroom.isNotEmpty)
+                                                      Text(entry.course.classroom, style: const TextStyle(fontSize: 12)),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
                       ),
                     ),
                   ),
-              ],
-            ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('课程列表', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      FilledButton.tonalIcon(
+                        onPressed: () => _openEditor(),
+                        icon: const Icon(Icons.add),
+                        label: const Text('新增课程'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: _courses.isEmpty
+                        ? const Padding(
+                            key: ValueKey('course-empty'),
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Center(child: Text('暂无课程，点击右上角新增')),
+                          )
+                        : Column(
+                            key: const ValueKey('course-list'),
+                            children: _courses
+                                .map(
+                                  (course) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: Material(
+                                      color: Colors.white.withValues(alpha: 0.88),
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(16),
+                                        onTap: () => _openEditor(course: course),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(14),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      course.name,
+                                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                                    ),
+                                                  ),
+                                                  IconButton(
+                                                    onPressed: () => _deleteCourse(course),
+                                                    icon: const Icon(Icons.delete_outline),
+                                                  ),
+                                                ],
+                                              ),
+                                              if (course.classroom.isNotEmpty || course.location.isNotEmpty)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(bottom: 6),
+                                                  child: Text('${course.classroom}  ${course.location}'.trim()),
+                                                ),
+                                              ...course.meetings.map((m) => Padding(
+                                                    padding: const EdgeInsets.only(bottom: 4),
+                                                    child: Text(_meetingText(m), style: const TextStyle(fontSize: 13)),
+                                                  )),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _actionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.86),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(icon),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

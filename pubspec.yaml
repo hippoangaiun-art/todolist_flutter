@@ -1,8 +1,6 @@
 name: todolist
 description: "A powerful toy of TODO-List"
-# The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 version: 1.1.0+2
 
 environment:
@@ -26,6 +24,7 @@ dependencies:
   excel: ^4.0.6
   file_picker: ^10.3.3
   syncfusion_flutter_xlsio: ^29.2.11
+  google_fonts: ^6.3.2
 
 dev_dependencies:
   flutter_test:

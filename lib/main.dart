@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:todolist/pages/app_shell.dart';
 
 void main() {
@@ -11,6 +12,9 @@ class TodoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final seed = const Color(0xFF0F766E);
+    final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light);
+
     return MaterialApp(
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -24,7 +28,13 @@ class TodoApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.teal,
+        colorScheme: scheme,
+        textTheme: GoogleFonts.notoSansScTextTheme(),
+        scaffoldBackgroundColor: const Color(0xFFF3F8F7),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
       ),
       home: const AppShell(),
     );

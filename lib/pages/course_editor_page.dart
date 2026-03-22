@@ -17,10 +17,12 @@ class CourseEditorPage extends StatefulWidget {
 }
 
 class _CourseEditorPageState extends State<CourseEditorPage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _classroomController;
   late final TextEditingController _locationController;
   late List<CourseMeeting> _meetings;
+  bool _meetingError = false;
 
   @override
   void initState() {
@@ -190,6 +192,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                       } else {
                         _meetings[index] = value;
                       }
+                      _meetingError = false;
                     });
                     Navigator.of(context).pop();
                   },
@@ -204,17 +207,20 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
   }
 
   void _save() {
-    final name = _nameController.text.trim();
-    if (name.isEmpty || _meetings.isEmpty) {
+    final valid = _formKey.currentState?.validate() ?? false;
+    setState(() {
+      _meetingError = _meetings.isEmpty;
+    });
+    if (!valid || _meetingError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请填写课程名并至少添加一个上课时段')),
+        const SnackBar(content: Text('请完成必填信息后再保存')),
       );
       return;
     }
 
     final course = Course(
       id: widget.initial?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
-      name: name,
+      name: _nameController.text.trim(),
       classroom: _classroomController.text.trim(),
       location: _locationController.text.trim(),
       meetings: [..._meetings],
@@ -235,76 +241,92 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: '课程名称',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _classroomController,
-            decoration: const InputDecoration(
-              labelText: '教室',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _locationController,
-            decoration: const InputDecoration(
-              labelText: '上课地点',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('上课时段', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              FilledButton.tonalIcon(
-                onPressed: () => _editMeeting(),
-                icon: const Icon(Icons.add),
-                label: const Text('新增时段'),
+      body: Form(
+        key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: '课程名称',
+                border: OutlineInputBorder(),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (_meetings.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('暂无上课时段'),
-            )
-          else
-            ..._meetings.asMap().entries.map((entry) {
-              final index = entry.key;
-              final meeting = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Material(
-                  borderRadius: BorderRadius.circular(14),
-                  color: Theme.of(context).colorScheme.surfaceContainerLow,
-                  child: ListTile(
-                    title: Text('${_weekdayLabel(meeting.weekday)} 第${meeting.startSection}-${meeting.endSection}节'),
-                    subtitle: Text('${meeting.weekStart}-${meeting.weekEnd}周'),
-                    onTap: () => _editMeeting(meeting: meeting, index: index),
-                    trailing: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _meetings.removeAt(index);
-                        });
-                      },
-                      icon: const Icon(Icons.delete_outline),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return '课程名称不能为空';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _classroomController,
+              decoration: const InputDecoration(
+                labelText: '教室',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _locationController,
+              decoration: const InputDecoration(
+                labelText: '上课地点',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('上课时段', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                FilledButton.tonalIcon(
+                  onPressed: () => _editMeeting(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('新增时段'),
+                ),
+              ],
+            ),
+            if (_meetingError)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('至少需要一个上课时段', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ),
+            const SizedBox(height: 10),
+            if (_meetings.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('暂无上课时段'),
+              )
+            else
+              ..._meetings.asMap().entries.map((entry) {
+                final index = entry.key;
+                final meeting = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Material(
+                    borderRadius: BorderRadius.circular(14),
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
+                    child: ListTile(
+                      title: Text('${_weekdayLabel(meeting.weekday)} 第${meeting.startSection}-${meeting.endSection}节'),
+                      subtitle: Text('${meeting.weekStart}-${meeting.weekEnd}周'),
+                      onTap: () => _editMeeting(meeting: meeting, index: index),
+                      trailing: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _meetings.removeAt(index);
+                            _meetingError = _meetings.isEmpty;
+                          });
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                      ),
                     ),
                   ),
-                ),
-              );
-            }),
-        ],
+                );
+              }),
+          ],
+        ),
       ),
     );
   }

@@ -4,6 +4,12 @@ import 'package:todolist/core/todo_rules.dart';
 import 'package:todolist/data/todo_repository.dart';
 import 'package:todolist/models/todo_item_v2.dart';
 
+enum _TodoFilter {
+  all,
+  active,
+  done,
+}
+
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
 
@@ -16,6 +22,7 @@ class _TodoPageState extends State<TodoPage> {
   List<TodoItemV2> _todos = const [];
   bool _loading = true;
   DateTime _selectedDate = TodoRules.normalize(DateTime.now());
+  _TodoFilter _filter = _TodoFilter.all;
 
   @override
   void initState() {
@@ -210,9 +217,23 @@ class _TodoPageState extends State<TodoPage> {
     await _saveTodos();
   }
 
+  List<TodoOccurrence> _applyFilter(List<TodoOccurrence> list) {
+    switch (_filter) {
+      case _TodoFilter.all:
+        return list;
+      case _TodoFilter.active:
+        return list.where((e) => !e.done).toList();
+      case _TodoFilter.done:
+        return list.where((e) => e.done).toList();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final occurrences = TodoRules.resolveForDate(_todos, _selectedDate);
+    final allOccurrences = TodoRules.resolveForDate(_todos, _selectedDate);
+    final occurrences = _applyFilter(allOccurrences);
+    final doneCount = allOccurrences.where((e) => e.done).length;
+    final activeCount = allOccurrences.length - doneCount;
 
     return Scaffold(
       appBar: AppBar(
@@ -224,47 +245,87 @@ class _TodoPageState extends State<TodoPage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-                  child: Row(
+                  child: Column(
                     children: [
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectedDate = _selectedDate.subtract(const Duration(days: 1));
-                          });
-                        },
-                        icon: const Icon(Icons.chevron_left),
-                      ),
-                      Expanded(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: _pickDate,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            decoration: BoxDecoration(
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+                              });
+                            },
+                            icon: const Icon(Icons.chevron_left),
+                          ),
+                          Expanded(
+                            child: InkWell(
                               borderRadius: BorderRadius.circular(12),
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.today_outlined, size: 18),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '${_formatDate(_selectedDate)} ${_weekdayLabel(_selectedDate.weekday)}',
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                              onTap: _pickDate,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                 ),
-                              ],
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.today_outlined, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${_formatDate(_selectedDate)} ${_weekdayLabel(_selectedDate.weekday)}',
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedDate = _selectedDate.add(const Duration(days: 1));
+                              });
+                            },
+                            icon: const Icon(Icons.chevron_right),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          color: Theme.of(context).colorScheme.surfaceContainer,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(child: _buildStat('总数', allOccurrences.length.toString())),
+                            Expanded(child: _buildStat('进行中', activeCount.toString())),
+                            Expanded(child: _buildStat('已完成', doneCount.toString())),
+                          ],
                         ),
                       ),
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectedDate = _selectedDate.add(const Duration(days: 1));
-                          });
-                        },
-                        icon: const Icon(Icons.chevron_right),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('全部'),
+                            selected: _filter == _TodoFilter.all,
+                            onSelected: (_) => setState(() => _filter = _TodoFilter.all),
+                          ),
+                          ChoiceChip(
+                            label: const Text('未完成'),
+                            selected: _filter == _TodoFilter.active,
+                            onSelected: (_) => setState(() => _filter = _TodoFilter.active),
+                          ),
+                          ChoiceChip(
+                            label: const Text('已完成'),
+                            selected: _filter == _TodoFilter.done,
+                            onSelected: (_) => setState(() => _filter = _TodoFilter.done),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -372,6 +433,16 @@ class _TodoPageState extends State<TodoPage> {
           color: Theme.of(context).colorScheme.onSecondaryContainer,
         ),
       ),
+    );
+  }
+
+  Widget _buildStat(String label, String value) {
+    return Column(
+      children: [
+        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
     );
   }
 }

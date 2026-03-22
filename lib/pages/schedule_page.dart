@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:todolist/core/excel_importer.dart';
+import 'package:todolist/core/theme_mode_notifier.dart';
 import 'package:todolist/data/schedule_repository.dart';
 import 'package:todolist/models/course.dart';
 import 'package:todolist/models/schedule_settings.dart';
@@ -51,6 +52,7 @@ class _SchedulePageState extends State<SchedulePage> {
       _selectedWeek = currentWeek;
       _loading = false;
     });
+    appThemeModeNotifier.value = parseThemeMode(settings.themeMode);
   }
 
   Future<void> _saveCourses() async {
@@ -123,6 +125,7 @@ class _SchedulePageState extends State<SchedulePage> {
       _settings = next;
       _selectedWeek = week;
     });
+    appThemeModeNotifier.value = parseThemeMode(next.themeMode);
     await _repository.saveSettings(next);
   }
 
@@ -593,3 +596,4 @@ class _ScheduleEntry {
     required this.meeting,
   });
 }
+

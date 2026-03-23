@@ -293,6 +293,31 @@ class _SchedulePageState extends State<SchedulePage> {
     return entries;
   }
 
+  Color _softSurface(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return scheme.surfaceContainerHigh;
+    }
+    return Colors.white.withValues(alpha: 0.86);
+  }
+
+  Color _softSurfaceStrong(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return scheme.surfaceContainer;
+    }
+    return Colors.white.withValues(alpha: 0.92);
+  }
+
+  List<BoxShadow> _shadowForTheme(BuildContext context) {
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return const [];
+    }
+    return const [
+      BoxShadow(color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 6)),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -350,7 +375,7 @@ class _SchedulePageState extends State<SchedulePage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.85),
+                      color: _softSurface(context),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
@@ -416,10 +441,8 @@ class _SchedulePageState extends State<SchedulePage> {
                             margin: const EdgeInsets.only(right: 10),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
-                              color: Colors.white.withValues(alpha: 0.85),
-                              boxShadow: const [
-                                BoxShadow(color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 6)),
-                              ],
+                              color: _softSurface(context),
+                              boxShadow: _shadowForTheme(context),
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
@@ -502,7 +525,7 @@ class _SchedulePageState extends State<SchedulePage> {
                                   (course) => Padding(
                                     padding: const EdgeInsets.only(bottom: 10),
                                     child: Material(
-                                      color: Colors.white.withValues(alpha: 0.88),
+                                      color: _softSurfaceStrong(context),
                                       borderRadius: BorderRadius.circular(16),
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(16),
@@ -558,7 +581,7 @@ class _SchedulePageState extends State<SchedulePage> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: Colors.white.withValues(alpha: 0.86),
+      color: _softSurface(context),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),

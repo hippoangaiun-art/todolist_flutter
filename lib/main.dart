@@ -56,6 +56,17 @@ class _TodoAppState extends State<TodoApp> {
             colorScheme: lightScheme,
             textTheme: GoogleFonts.notoSansScTextTheme(),
             scaffoldBackgroundColor: const Color(0xFFF3F8F7),
+            dialogTheme: DialogThemeData(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            ),
+            bottomSheetTheme: const BottomSheetThemeData(
+              showDragHandle: true,
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: lightScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
             cardTheme: CardThemeData(
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -66,6 +77,17 @@ class _TodoAppState extends State<TodoApp> {
             colorScheme: darkScheme,
             textTheme: GoogleFonts.notoSansScTextTheme(ThemeData(brightness: Brightness.dark).textTheme),
             scaffoldBackgroundColor: const Color(0xFF0F1516),
+            dialogTheme: DialogThemeData(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            ),
+            bottomSheetTheme: const BottomSheetThemeData(
+              showDragHandle: true,
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: darkScheme.surfaceContainerHigh,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
             cardTheme: CardThemeData(
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

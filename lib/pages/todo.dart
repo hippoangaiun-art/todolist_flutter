@@ -229,6 +229,35 @@ class _TodoPageState extends State<TodoPage> {
     }
   }
 
+  Color _softSurface(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return scheme.surfaceContainerHigh;
+    }
+    return Colors.white.withValues(alpha: 0.82);
+  }
+
+  Color _softSurfaceStrong(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return scheme.surfaceContainer;
+    }
+    return Colors.white.withValues(alpha: 0.9);
+  }
+
+  List<BoxShadow> _shadowForTheme(BuildContext context) {
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return const [];
+    }
+    return const [
+      BoxShadow(
+        color: Color(0x14000000),
+        blurRadius: 18,
+        offset: Offset(0, 8),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final allOccurrences = TodoRules.resolveForDate(_todos, _selectedDate);
@@ -269,7 +298,7 @@ class _TodoPageState extends State<TodoPage> {
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(16),
-                                    color: Colors.white.withValues(alpha: 0.72),
+                                    color: _softSurface(context),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -300,14 +329,8 @@ class _TodoPageState extends State<TodoPage> {
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
-                            color: Colors.white.withValues(alpha: 0.82),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x14000000),
-                                blurRadius: 18,
-                                offset: Offset(0, 8),
-                              ),
-                            ],
+                            color: _softSurfaceStrong(context),
+                            boxShadow: _shadowForTheme(context),
                           ),
                           child: Row(
                             children: [
@@ -395,7 +418,7 @@ class _TodoPageState extends State<TodoPage> {
                                       ),
                                     ),
                                     child: Material(
-                                      color: Colors.white.withValues(alpha: 0.88),
+                                      color: _softSurfaceStrong(context),
                                       borderRadius: BorderRadius.circular(16),
                                       child: InkWell(
                                         onTap: () => _showEditDialog(todo: todo),

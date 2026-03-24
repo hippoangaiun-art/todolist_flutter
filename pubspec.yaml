@@ -25,6 +25,7 @@ dependencies:
   file_picker: ^10.3.3
   syncfusion_flutter_xlsio: ^29.2.11
   google_fonts: ^6.3.2
+  excel2003: ^1.0.0
 
 dev_dependencies:
   flutter_test:

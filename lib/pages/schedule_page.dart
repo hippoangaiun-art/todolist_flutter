@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:todolist/core/excel_importer.dart';
+import 'package:todolist/core/schedule_rules.dart';
 import 'package:todolist/core/theme_mode_notifier.dart';
 import 'package:todolist/data/schedule_repository.dart';
 import 'package:todolist/models/course.dart';
@@ -35,8 +36,6 @@ class _SchedulePageState extends State<SchedulePage> {
     _load();
   }
 
-  DateTime _normalize(DateTime date) => DateTime(date.year, date.month, date.day);
-
   Future<void> _load() async {
     final sections = await _repository.fetchSections();
     final courses = await _repository.fetchCourses();
@@ -44,7 +43,7 @@ class _SchedulePageState extends State<SchedulePage> {
     if (!mounted) {
       return;
     }
-    final currentWeek = _resolveWeekFromDate(DateTime.now(), settings);
+    final currentWeek = ScheduleRules.resolveWeekFromDate(DateTime.now(), settings.firstWeekDate);
     setState(() {
       _sections = sections;
       _courses = courses;
@@ -57,17 +56,6 @@ class _SchedulePageState extends State<SchedulePage> {
 
   Future<void> _saveCourses() async {
     await _repository.saveCourses(_courses);
-  }
-
-  int _resolveWeekFromDate(DateTime date, ScheduleSettings settings) {
-    if (settings.firstWeekDate == null) {
-      return 1;
-    }
-    final diff = _normalize(date).difference(_normalize(settings.firstWeekDate!)).inDays;
-    if (diff < 0) {
-      return 1;
-    }
-    return diff ~/ 7 + 1;
   }
 
   String _weekdayLabel(int weekday) {
@@ -120,7 +108,7 @@ class _SchedulePageState extends State<SchedulePage> {
     if (next == null) {
       return;
     }
-    final week = _resolveWeekFromDate(DateTime.now(), next);
+    final week = ScheduleRules.resolveWeekFromDate(DateTime.now(), next.firstWeekDate);
     setState(() {
       _settings = next;
       _selectedWeek = week;
@@ -147,7 +135,7 @@ class _SchedulePageState extends State<SchedulePage> {
     final next = _settings.copyWith(firstWeekDate: DateTime(picked.year, picked.month, picked.day));
     setState(() {
       _settings = next;
-      _selectedWeek = _resolveWeekFromDate(DateTime.now(), next);
+      _selectedWeek = ScheduleRules.resolveWeekFromDate(DateTime.now(), next.firstWeekDate);
     });
     await _repository.saveSettings(next);
     return next.firstWeekDate;
@@ -250,13 +238,13 @@ class _SchedulePageState extends State<SchedulePage> {
       return;
     }
     setState(() {
-      _selectedWeek = _resolveWeekFromDate(picked, _settings);
+      _selectedWeek = ScheduleRules.resolveWeekFromDate(picked, _settings.firstWeekDate);
     });
   }
 
   void _goToCurrentWeek() {
     setState(() {
-      _selectedWeek = _resolveWeekFromDate(DateTime.now(), _settings);
+      _selectedWeek = ScheduleRules.resolveWeekFromDate(DateTime.now(), _settings.firstWeekDate);
     });
   }
 
@@ -269,11 +257,11 @@ class _SchedulePageState extends State<SchedulePage> {
 
   DateTime? _weekdayDateInWeek(int weekday) {
     final firstWeekDate = _settings.firstWeekDate;
-    if (firstWeekDate == null) {
-      return null;
-    }
-    final start = _normalize(firstWeekDate).add(Duration(days: (_selectedWeek - 1) * 7));
-    return start.add(Duration(days: weekday - 1));
+    return ScheduleRules.weekdayDateInWeek(
+      weekday: weekday,
+      selectedWeek: _selectedWeek,
+      firstWeekDate: firstWeekDate,
+    );
   }
 
   List<_ScheduleEntry> _entriesForWeekday(int weekday) {
@@ -283,7 +271,7 @@ class _SchedulePageState extends State<SchedulePage> {
         if (meeting.weekday != weekday) {
           continue;
         }
-        if (_selectedWeek < meeting.weekStart || _selectedWeek > meeting.weekEnd) {
+        if (!ScheduleRules.isMeetingVisible(meeting, _selectedWeek)) {
           continue;
         }
         entries.add(_ScheduleEntry(course: course, meeting: meeting));

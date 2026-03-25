@@ -14,6 +14,23 @@ class AboutPage extends StatelessWidget {
     }
   }
 
+  Color _softSurface(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return scheme.surfaceContainerHigh;
+    }
+    return Colors.white.withValues(alpha: 0.88);
+  }
+
+  List<BoxShadow> _shadowForTheme(BuildContext context) {
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return const [];
+    }
+    return const [
+      BoxShadow(color: Color(0x14000000), blurRadius: 16, offset: Offset(0, 8)),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,28 +48,38 @@ class AboutPage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.88),
+                    color: _softSurface(context),
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x14000000), blurRadius: 16, offset: Offset(0, 8)),
-                    ],
+                    boxShadow: _shadowForTheme(context),
                   ),
                   child: Column(
                     children: [
-                      SvgPicture.asset('assets/icon/splash.svg', width: 120, height: 120),
+                      SvgPicture.asset(
+                        'assets/icon/splash.svg',
+                        width: 120,
+                        height: 120,
+                      ),
                       const SizedBox(height: 16),
-                      const Text('BUPT ToDo List', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+                      const Text(
+                        'BUPT ToDo List',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         '课表与待办一体化管理',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
                 Material(
-                  color: Colors.white.withValues(alpha: 0.88),
+                  color: _softSurface(context),
                   borderRadius: BorderRadius.circular(16),
                   child: ListTile(
                     leading: const Icon(Icons.code),

@@ -44,7 +44,10 @@ class _SectionConfigPageState extends State<SectionConfigPage> {
   Future<int?> _pickTime(int initialMinutes) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay(hour: initialMinutes ~/ 60, minute: initialMinutes % 60),
+      initialTime: TimeOfDay(
+        hour: initialMinutes ~/ 60,
+        minute: initialMinutes % 60,
+      ),
     );
     if (picked == null) {
       return null;
@@ -132,9 +135,14 @@ class _SectionConfigPageState extends State<SectionConfigPage> {
                   onPressed: () async {
                     syncFromDuration();
                     setState(() {
-                      final idx = _sections.indexWhere((e) => e.number == slot.number);
+                      final idx = _sections.indexWhere(
+                        (e) => e.number == slot.number,
+                      );
                       if (idx >= 0) {
-                        _sections[idx] = slot.copyWith(startMinutes: start, endMinutes: end);
+                        _sections[idx] = slot.copyWith(
+                          startMinutes: start,
+                          endMinutes: end,
+                        );
                       }
                     });
                     await _save();
@@ -156,9 +164,7 @@ class _SectionConfigPageState extends State<SectionConfigPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('节次设置'),
-      ),
+      appBar: AppBar(title: const Text('节次设置')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView.separated(
@@ -169,9 +175,13 @@ class _SectionConfigPageState extends State<SectionConfigPage> {
                   color: Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(14),
                   child: ListTile(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     title: Text('第${slot.number}节'),
-                    subtitle: Text('${_formatMinutes(slot.startMinutes)} - ${_formatMinutes(slot.endMinutes)}  ·  ${slot.durationMinutes}分钟'),
+                    subtitle: Text(
+                      '${_formatMinutes(slot.startMinutes)} - ${_formatMinutes(slot.endMinutes)}  ·  ${slot.durationMinutes}分钟',
+                    ),
                     trailing: const Icon(Icons.edit_outlined),
                     onTap: () => _editSection(slot),
                   ),

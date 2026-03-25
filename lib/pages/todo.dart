@@ -5,11 +5,7 @@ import 'package:todolist/data/todo_repository.dart';
 import 'package:todolist/models/todo_item_v2.dart';
 import 'package:todolist/widgets/gradient_background.dart';
 
-enum _TodoFilter {
-  all,
-  active,
-  done,
-}
+enum _TodoFilter { all, active, done }
 
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
@@ -250,11 +246,7 @@ class _TodoPageState extends State<TodoPage> {
       return const [];
     }
     return const [
-      BoxShadow(
-        color: Color(0x14000000),
-        blurRadius: 18,
-        offset: Offset(0, 8),
-      ),
+      BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8)),
     ];
   }
 
@@ -285,7 +277,9 @@ class _TodoPageState extends State<TodoPage> {
                             IconButton(
                               onPressed: () {
                                 setState(() {
-                                  _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+                                  _selectedDate = _selectedDate.subtract(
+                                    const Duration(days: 1),
+                                  );
                                 });
                               },
                               icon: const Icon(Icons.chevron_left),
@@ -295,7 +289,10 @@ class _TodoPageState extends State<TodoPage> {
                                 borderRadius: BorderRadius.circular(16),
                                 onTap: _pickDate,
                                 child: Ink(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(16),
                                     color: _softSurface(context),
@@ -303,11 +300,16 @@ class _TodoPageState extends State<TodoPage> {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.today_outlined, size: 18),
+                                      const Icon(
+                                        Icons.today_outlined,
+                                        size: 18,
+                                      ),
                                       const SizedBox(width: 8),
                                       Text(
                                         '${_formatDate(_selectedDate)} ${_weekdayLabel(_selectedDate.weekday)}',
-                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -317,7 +319,9 @@ class _TodoPageState extends State<TodoPage> {
                             IconButton(
                               onPressed: () {
                                 setState(() {
-                                  _selectedDate = _selectedDate.add(const Duration(days: 1));
+                                  _selectedDate = _selectedDate.add(
+                                    const Duration(days: 1),
+                                  );
                                 });
                               },
                               icon: const Icon(Icons.chevron_right),
@@ -334,9 +338,21 @@ class _TodoPageState extends State<TodoPage> {
                           ),
                           child: Row(
                             children: [
-                              Expanded(child: _buildStat('总数', allOccurrences.length.toString())),
-                              Expanded(child: _buildStat('进行中', activeCount.toString())),
-                              Expanded(child: _buildStat('已完成', doneCount.toString())),
+                              Expanded(
+                                child: _buildStat(
+                                  '总数',
+                                  allOccurrences.length.toString(),
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildStat(
+                                  '进行中',
+                                  activeCount.toString(),
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildStat('已完成', doneCount.toString()),
+                              ),
                             ],
                           ),
                         ),
@@ -347,17 +363,20 @@ class _TodoPageState extends State<TodoPage> {
                             ChoiceChip(
                               label: const Text('全部'),
                               selected: _filter == _TodoFilter.all,
-                              onSelected: (_) => setState(() => _filter = _TodoFilter.all),
+                              onSelected: (_) =>
+                                  setState(() => _filter = _TodoFilter.all),
                             ),
                             ChoiceChip(
                               label: const Text('未完成'),
                               selected: _filter == _TodoFilter.active,
-                              onSelected: (_) => setState(() => _filter = _TodoFilter.active),
+                              onSelected: (_) =>
+                                  setState(() => _filter = _TodoFilter.active),
                             ),
                             ChoiceChip(
                               label: const Text('已完成'),
                               selected: _filter == _TodoFilter.done,
-                              onSelected: (_) => setState(() => _filter = _TodoFilter.done),
+                              onSelected: (_) =>
+                                  setState(() => _filter = _TodoFilter.done),
                             ),
                           ],
                         ),
@@ -381,15 +400,23 @@ class _TodoPageState extends State<TodoPage> {
                             )
                           : ListView.separated(
                               key: const ValueKey('todo-list'),
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                8,
+                                16,
+                                100,
+                              ),
                               itemCount: occurrences.length,
-                              separatorBuilder: (_, _) => const SizedBox(height: 10),
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 10),
                               itemBuilder: (context, index) {
                                 final occurrence = occurrences[index];
                                 final todo = occurrence.todo;
                                 return TweenAnimationBuilder<double>(
                                   tween: Tween(begin: 0, end: 1),
-                                  duration: Duration(milliseconds: 180 + index * 40),
+                                  duration: Duration(
+                                    milliseconds: 180 + index * 40,
+                                  ),
                                   builder: (context, value, child) {
                                     return Opacity(
                                       opacity: value,
@@ -400,28 +427,35 @@ class _TodoPageState extends State<TodoPage> {
                                     );
                                   },
                                   child: Dismissible(
-                                    key: ValueKey('${todo.id}_${occurrence.date.toIso8601String()}'),
+                                    key: ValueKey(
+                                      '${todo.id}_${occurrence.date.toIso8601String()}',
+                                    ),
                                     direction: DismissDirection.endToStart,
                                     onDismissed: (_) {
                                       _deleteTodo(todo);
                                     },
                                     background: Container(
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.error,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.error,
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       alignment: Alignment.centerRight,
                                       padding: const EdgeInsets.only(right: 16),
                                       child: Icon(
                                         Icons.delete,
-                                        color: Theme.of(context).colorScheme.onError,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onError,
                                       ),
                                     ),
                                     child: Material(
                                       color: _softSurfaceStrong(context),
                                       borderRadius: BorderRadius.circular(16),
                                       child: InkWell(
-                                        onTap: () => _showEditDialog(todo: todo),
+                                        onTap: () =>
+                                            _showEditDialog(todo: todo),
                                         borderRadius: BorderRadius.circular(16),
                                         child: Padding(
                                           padding: const EdgeInsets.all(14),
@@ -429,20 +463,27 @@ class _TodoPageState extends State<TodoPage> {
                                             children: [
                                               Checkbox(
                                                 value: occurrence.done,
-                                                onChanged: (_) => _toggleDone(occurrence),
+                                                onChanged: (_) =>
+                                                    _toggleDone(occurrence),
                                               ),
                                               const SizedBox(width: 10),
                                               Expanded(
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
                                                       todo.title,
                                                       maxLines: 3,
-                                                      overflow: TextOverflow.ellipsis,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                       style: TextStyle(
                                                         fontSize: 16,
-                                                        decoration: occurrence.done ? TextDecoration.lineThrough : null,
+                                                        decoration:
+                                                            occurrence.done
+                                                            ? TextDecoration
+                                                                  .lineThrough
+                                                            : null,
                                                       ),
                                                     ),
                                                     const SizedBox(height: 6),
@@ -450,9 +491,28 @@ class _TodoPageState extends State<TodoPage> {
                                                       spacing: 6,
                                                       runSpacing: 6,
                                                       children: [
-                                                        _buildTag(context, _formatDate(TodoRules.normalize(todo.date))),
-                                                        if (todo.repeatWeekdays.isNotEmpty)
-                                                          ...todo.repeatWeekdays.map((e) => _buildTag(context, _weekdayLabel(e))),
+                                                        _buildTag(
+                                                          context,
+                                                          _formatDate(
+                                                            TodoRules.normalize(
+                                                              todo.date,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        if (todo
+                                                            .repeatWeekdays
+                                                            .isNotEmpty)
+                                                          ...todo.repeatWeekdays
+                                                              .map(
+                                                                (
+                                                                  e,
+                                                                ) => _buildTag(
+                                                                  context,
+                                                                  _weekdayLabel(
+                                                                    e,
+                                                                  ),
+                                                                ),
+                                                              ),
                                                       ],
                                                     ),
                                                   ],
@@ -501,7 +561,10 @@ class _TodoPageState extends State<TodoPage> {
   Widget _buildStat(String label, String value) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
         const SizedBox(height: 4),
         Text(label, style: const TextStyle(fontSize: 12)),
       ],

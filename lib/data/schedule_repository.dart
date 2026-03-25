@@ -29,7 +29,9 @@ class ScheduleRepository {
       return [];
     }
     final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded.map((e) => Course.fromJson(e as Map<String, dynamic>)).toList();
+    return decoded
+        .map((e) => Course.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> saveCourses(List<Course> courses) async {
@@ -68,7 +70,11 @@ class ScheduleRepository {
     return List.generate(starts.length, (index) {
       final start = starts[index];
       final end = start + 45;
-      return SectionSlot(number: index + 1, startMinutes: start, endMinutes: end);
+      return SectionSlot(
+        number: index + 1,
+        startMinutes: start,
+        endMinutes: end,
+      );
     });
   }
 }

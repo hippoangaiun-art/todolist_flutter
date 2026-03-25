@@ -5,10 +5,7 @@ import 'package:todolist/models/schedule_settings.dart';
 class ScheduleSettingsPage extends StatefulWidget {
   final ScheduleSettings initial;
 
-  const ScheduleSettingsPage({
-    super.key,
-    required this.initial,
-  });
+  const ScheduleSettingsPage({super.key, required this.initial});
 
   @override
   State<ScheduleSettingsPage> createState() => _ScheduleSettingsPageState();
@@ -44,7 +41,9 @@ class _ScheduleSettingsPageState extends State<ScheduleSettingsPage> {
       return;
     }
     setState(() {
-      _settings = _settings.copyWith(firstWeekDate: DateTime(picked.year, picked.month, picked.day));
+      _settings = _settings.copyWith(
+        firstWeekDate: DateTime(picked.year, picked.month, picked.day),
+      );
     });
   }
 
@@ -62,9 +61,7 @@ class _ScheduleSettingsPageState extends State<ScheduleSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('课表设置'),
-      ),
+      appBar: AppBar(title: const Text('课表设置')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -143,9 +140,9 @@ class _ScheduleSettingsPageState extends State<ScheduleSettingsPage> {
           const SizedBox(height: 16),
           FilledButton(
             onPressed: () {
-              Navigator.of(context).pop(
-                _settings.copyWith(themeMode: encodeThemeMode(_themeMode)),
-              );
+              Navigator.of(
+                context,
+              ).pop(_settings.copyWith(themeMode: encodeThemeMode(_themeMode)));
             },
             child: const Text('保存设置'),
           ),

@@ -28,7 +28,10 @@ void main() {
       repeatWeekdays: const [1, 5],
     );
 
-    final visibleBefore = TodoRules.isVisibleOnDate(todo, DateTime(2026, 3, 16));
+    final visibleBefore = TodoRules.isVisibleOnDate(
+      todo,
+      DateTime(2026, 3, 16),
+    );
     final visibleAfter = TodoRules.isVisibleOnDate(todo, DateTime(2026, 3, 23));
 
     expect(visibleBefore, false);

@@ -12,11 +12,10 @@ Future<List<Todo>> fetchTodos() async {
   }
 }
 
-
 Future<void> saveTodos(List<Todo> todos) async {
-  final List<Map<String, dynamic>> jsonList =
-  todos.map((t) => t.toJson()).toList();
+  final List<Map<String, dynamic>> jsonList = todos
+      .map((t) => t.toJson())
+      .toList();
   final jsonStr = jsonEncode(jsonList);
   await Const.todoLists.setValue(jsonStr);
 }
-

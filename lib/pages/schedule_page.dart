@@ -43,7 +43,10 @@ class _SchedulePageState extends State<SchedulePage> {
     if (!mounted) {
       return;
     }
-    final currentWeek = ScheduleRules.resolveWeekFromDate(DateTime.now(), settings.firstWeekDate);
+    final currentWeek = ScheduleRules.resolveWeekFromDate(
+      DateTime.now(),
+      settings.firstWeekDate,
+    );
     setState(() {
       _sections = sections;
       _courses = courses;
@@ -77,10 +80,7 @@ class _SchedulePageState extends State<SchedulePage> {
   Future<void> _openEditor({Course? course}) async {
     final result = await Navigator.of(context).push<Course>(
       MaterialPageRoute(
-        builder: (_) => CourseEditorPage(
-          sections: _sections,
-          initial: course,
-        ),
+        builder: (_) => CourseEditorPage(sections: _sections, initial: course),
       ),
     );
 
@@ -108,7 +108,10 @@ class _SchedulePageState extends State<SchedulePage> {
     if (next == null) {
       return;
     }
-    final week = ScheduleRules.resolveWeekFromDate(DateTime.now(), next.firstWeekDate);
+    final week = ScheduleRules.resolveWeekFromDate(
+      DateTime.now(),
+      next.firstWeekDate,
+    );
     setState(() {
       _settings = next;
       _selectedWeek = week;
@@ -132,10 +135,15 @@ class _SchedulePageState extends State<SchedulePage> {
     if (picked == null) {
       return null;
     }
-    final next = _settings.copyWith(firstWeekDate: DateTime(picked.year, picked.month, picked.day));
+    final next = _settings.copyWith(
+      firstWeekDate: DateTime(picked.year, picked.month, picked.day),
+    );
     setState(() {
       _settings = next;
-      _selectedWeek = ScheduleRules.resolveWeekFromDate(DateTime.now(), next.firstWeekDate);
+      _selectedWeek = ScheduleRules.resolveWeekFromDate(
+        DateTime.now(),
+        next.firstWeekDate,
+      );
     });
     await _repository.saveSettings(next);
     return next.firstWeekDate;
@@ -152,9 +160,9 @@ class _SchedulePageState extends State<SchedulePage> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先授予存储权限')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先授予存储权限')));
       return;
     }
 
@@ -194,7 +202,11 @@ class _SchedulePageState extends State<SchedulePage> {
       }
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已导入 ${imported.length} 门课程（第一周：${_formatDate(firstWeekDate)}）')),
+        SnackBar(
+          content: Text(
+            '已导入 ${imported.length} 门课程（第一周：${_formatDate(firstWeekDate)}）',
+          ),
+        ),
       );
     } catch (e) {
       if (mounted && Navigator.of(context).canPop()) {
@@ -221,9 +233,9 @@ class _SchedulePageState extends State<SchedulePage> {
 
   Future<void> _goToDate() async {
     if (_settings.firstWeekDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先设置第一周日期再进行日期定位')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先设置第一周日期再进行日期定位')));
       return;
     }
     final picked = await showDatePicker(
@@ -238,13 +250,19 @@ class _SchedulePageState extends State<SchedulePage> {
       return;
     }
     setState(() {
-      _selectedWeek = ScheduleRules.resolveWeekFromDate(picked, _settings.firstWeekDate);
+      _selectedWeek = ScheduleRules.resolveWeekFromDate(
+        picked,
+        _settings.firstWeekDate,
+      );
     });
   }
 
   void _goToCurrentWeek() {
     setState(() {
-      _selectedWeek = ScheduleRules.resolveWeekFromDate(DateTime.now(), _settings.firstWeekDate);
+      _selectedWeek = ScheduleRules.resolveWeekFromDate(
+        DateTime.now(),
+        _settings.firstWeekDate,
+      );
     });
   }
 
@@ -277,7 +295,9 @@ class _SchedulePageState extends State<SchedulePage> {
         entries.add(_ScheduleEntry(course: course, meeting: meeting));
       }
     }
-    entries.sort((a, b) => a.meeting.startSection.compareTo(b.meeting.startSection));
+    entries.sort(
+      (a, b) => a.meeting.startSection.compareTo(b.meeting.startSection),
+    );
     return entries;
   }
 
@@ -351,17 +371,24 @@ class _SchedulePageState extends State<SchedulePage> {
                   _actionCard(
                     icon: Icons.schedule,
                     title: '节次设置',
-                    subtitle: _sections.isEmpty ? '尚未配置节次' : '已配置 ${_sections.length} 节，点击编辑',
+                    subtitle: _sections.isEmpty
+                        ? '尚未配置节次'
+                        : '已配置 ${_sections.length} 节，点击编辑',
                     onTap: () async {
                       await Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SectionConfigPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const SectionConfigPage(),
+                        ),
                       );
                       await _load();
                     },
                   ),
                   const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: _softSurface(context),
                       borderRadius: BorderRadius.circular(16),
@@ -380,7 +407,10 @@ class _SchedulePageState extends State<SchedulePage> {
                           child: Text(
                             '第 $_selectedWeek 周',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                         IconButton(
@@ -437,11 +467,21 @@ class _SchedulePageState extends State<SchedulePage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(_weekdayLabel(weekday), style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  Text(
+                                    _weekdayLabel(weekday),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                   const SizedBox(height: 4),
                                   Text(
                                     _formatDate(date),
-                                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
                                   const SizedBox(height: 10),
                                   Expanded(
@@ -449,28 +489,52 @@ class _SchedulePageState extends State<SchedulePage> {
                                         ? const Center(child: Text('无课程'))
                                         : ListView.separated(
                                             itemCount: entries.length,
-                                            separatorBuilder: (_, _) => const SizedBox(height: 8),
+                                            separatorBuilder: (_, _) =>
+                                                const SizedBox(height: 8),
                                             itemBuilder: (context, i) {
                                               final entry = entries[i];
                                               return Container(
-                                                padding: const EdgeInsets.all(10),
+                                                padding: const EdgeInsets.all(
+                                                  10,
+                                                ),
                                                 decoration: BoxDecoration(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  color: Theme.of(context).colorScheme.secondaryContainer,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .secondaryContainer,
                                                 ),
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
                                                       entry.course.name,
                                                       maxLines: 2,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
                                                     ),
                                                     const SizedBox(height: 4),
-                                                    Text('第${entry.meeting.startSection}-${entry.meeting.endSection}节', style: const TextStyle(fontSize: 12)),
-                                                    if (entry.course.classroom.isNotEmpty)
-                                                      Text(entry.course.classroom, style: const TextStyle(fontSize: 12)),
+                                                    Text(
+                                                      '第${entry.meeting.startSection}-${entry.meeting.endSection}节',
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                    if (entry
+                                                        .course
+                                                        .classroom
+                                                        .isNotEmpty)
+                                                      Text(
+                                                        entry.course.classroom,
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
                                                   ],
                                                 ),
                                               );
@@ -489,7 +553,13 @@ class _SchedulePageState extends State<SchedulePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('课程列表', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text(
+                        '课程列表',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       FilledButton.tonalIcon(
                         onPressed: () => _openEditor(),
                         icon: const Icon(Icons.add),
@@ -517,35 +587,61 @@ class _SchedulePageState extends State<SchedulePage> {
                                       borderRadius: BorderRadius.circular(16),
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(16),
-                                        onTap: () => _openEditor(course: course),
+                                        onTap: () =>
+                                            _openEditor(course: course),
                                         child: Padding(
                                           padding: const EdgeInsets.all(14),
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Row(
                                                 children: [
                                                   Expanded(
                                                     child: Text(
                                                       course.name,
-                                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
                                                     ),
                                                   ),
                                                   IconButton(
-                                                    onPressed: () => _deleteCourse(course),
-                                                    icon: const Icon(Icons.delete_outline),
+                                                    onPressed: () =>
+                                                        _deleteCourse(course),
+                                                    icon: const Icon(
+                                                      Icons.delete_outline,
+                                                    ),
                                                   ),
                                                 ],
                                               ),
-                                              if (course.classroom.isNotEmpty || course.location.isNotEmpty)
+                                              if (course.classroom.isNotEmpty ||
+                                                  course.location.isNotEmpty)
                                                 Padding(
-                                                  padding: const EdgeInsets.only(bottom: 6),
-                                                  child: Text('${course.classroom}  ${course.location}'.trim()),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        bottom: 6,
+                                                      ),
+                                                  child: Text(
+                                                    '${course.classroom}  ${course.location}'
+                                                        .trim(),
+                                                  ),
                                                 ),
-                                              ...course.meetings.map((m) => Padding(
-                                                    padding: const EdgeInsets.only(bottom: 4),
-                                                    child: Text(_meetingText(m), style: const TextStyle(fontSize: 13)),
-                                                  )),
+                                              ...course.meetings.map(
+                                                (m) => Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        bottom: 4,
+                                                      ),
+                                                  child: Text(
+                                                    _meetingText(m),
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -584,9 +680,17 @@ class _SchedulePageState extends State<SchedulePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                     const SizedBox(height: 2),
-                    Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ],
                 ),
               ),
@@ -602,9 +706,5 @@ class _ScheduleEntry {
   final Course course;
   final CourseMeeting meeting;
 
-  const _ScheduleEntry({
-    required this.course,
-    required this.meeting,
-  });
+  const _ScheduleEntry({required this.course, required this.meeting});
 }
-

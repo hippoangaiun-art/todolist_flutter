@@ -11,11 +11,7 @@ class SectionSlot {
 
   int get durationMinutes => endMinutes - startMinutes;
 
-  SectionSlot copyWith({
-    int? number,
-    int? startMinutes,
-    int? endMinutes,
-  }) {
+  SectionSlot copyWith({int? number, int? startMinutes, int? endMinutes}) {
     return SectionSlot(
       number: number ?? this.number,
       startMinutes: startMinutes ?? this.startMinutes,

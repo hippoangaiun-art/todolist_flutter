@@ -14,7 +14,6 @@ class PrefField<T> {
     if (T == bool) return (prefs.getBool(key) ?? defaultValue) as T;
     if (T == double) return (prefs.getDouble(key) ?? defaultValue) as T;
     throw UnsupportedError("类型不支持");
-
   }
 
   Future<void> setValue(T newValue) async {

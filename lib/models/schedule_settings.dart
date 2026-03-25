@@ -13,7 +13,9 @@ class ScheduleSettings {
     bool clearFirstWeekDate = false,
   }) {
     return ScheduleSettings(
-      firstWeekDate: clearFirstWeekDate ? null : (firstWeekDate ?? this.firstWeekDate),
+      firstWeekDate: clearFirstWeekDate
+          ? null
+          : (firstWeekDate ?? this.firstWeekDate),
       themeMode: themeMode ?? this.themeMode,
     );
   }
@@ -26,7 +28,9 @@ class ScheduleSettings {
   factory ScheduleSettings.fromJson(Map<String, dynamic> json) {
     final rawDate = json['firstWeekDate'] as String?;
     return ScheduleSettings(
-      firstWeekDate: rawDate == null || rawDate.isEmpty ? null : DateTime.parse(rawDate),
+      firstWeekDate: rawDate == null || rawDate.isEmpty
+          ? null
+          : DateTime.parse(rawDate),
       themeMode: json['themeMode'] as String? ?? 'system',
     );
   }

@@ -6,11 +6,7 @@ class CourseEditorPage extends StatefulWidget {
   final Course? initial;
   final List<SectionSlot> sections;
 
-  const CourseEditorPage({
-    super.key,
-    required this.sections,
-    this.initial,
-  });
+  const CourseEditorPage({super.key, required this.sections, this.initial});
 
   @override
   State<CourseEditorPage> createState() => _CourseEditorPageState();
@@ -28,8 +24,12 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initial?.name ?? '');
-    _classroomController = TextEditingController(text: widget.initial?.classroom ?? '');
-    _locationController = TextEditingController(text: widget.initial?.location ?? '');
+    _classroomController = TextEditingController(
+      text: widget.initial?.classroom ?? '',
+    );
+    _locationController = TextEditingController(
+      text: widget.initial?.location ?? '',
+    );
     _meetings = [...widget.initial?.meetings ?? const <CourseMeeting>[]];
   }
 
@@ -58,8 +58,12 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
     final sectionNumbers = _sectionNumbers;
     int startSection = meeting?.startSection ?? sectionNumbers.first;
     int endSection = meeting?.endSection ?? sectionNumbers.first;
-    final weekStartController = TextEditingController(text: '${meeting?.weekStart ?? 1}');
-    final weekEndController = TextEditingController(text: '${meeting?.weekEnd ?? 18}');
+    final weekStartController = TextEditingController(
+      text: '${meeting?.weekStart ?? 1}',
+    );
+    final weekEndController = TextEditingController(
+      text: '${meeting?.weekEnd ?? 18}',
+    );
     String? error;
 
     await showDialog(
@@ -78,7 +82,10 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                       decoration: const InputDecoration(labelText: '星期'),
                       items: List.generate(7, (i) {
                         final weekday = i + 1;
-                        return DropdownMenuItem(value: weekday, child: Text(_weekdayLabel(weekday)));
+                        return DropdownMenuItem(
+                          value: weekday,
+                          child: Text(_weekdayLabel(weekday)),
+                        );
                       }),
                       onChanged: (value) {
                         if (value == null) {
@@ -95,9 +102,16 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             value: startSection,
-                            decoration: const InputDecoration(labelText: '起始节次'),
+                            decoration: const InputDecoration(
+                              labelText: '起始节次',
+                            ),
                             items: sectionNumbers
-                                .map((n) => DropdownMenuItem(value: n, child: Text('第${n}节')))
+                                .map(
+                                  (n) => DropdownMenuItem(
+                                    value: n,
+                                    child: Text('第${n}节'),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: (value) {
                               if (value == null) {
@@ -116,9 +130,16 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             value: endSection,
-                            decoration: const InputDecoration(labelText: '结束节次'),
+                            decoration: const InputDecoration(
+                              labelText: '结束节次',
+                            ),
                             items: sectionNumbers
-                                .map((n) => DropdownMenuItem(value: n, child: Text('第${n}节')))
+                                .map(
+                                  (n) => DropdownMenuItem(
+                                    value: n,
+                                    child: Text('第${n}节'),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: (value) {
                               if (value == null) {
@@ -157,7 +178,12 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                     ),
                     if (error != null) ...[
                       const SizedBox(height: 8),
-                      Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                      Text(
+                        error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -169,9 +195,14 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                 ),
                 FilledButton(
                   onPressed: () {
-                    final weekStart = int.tryParse(weekStartController.text.trim());
+                    final weekStart = int.tryParse(
+                      weekStartController.text.trim(),
+                    );
                     final weekEnd = int.tryParse(weekEndController.text.trim());
-                    if (weekStart == null || weekEnd == null || weekStart < 1 || weekEnd < weekStart) {
+                    if (weekStart == null ||
+                        weekEnd == null ||
+                        weekStart < 1 ||
+                        weekEnd < weekStart) {
                       setDialogState(() {
                         error = '周次范围不合法';
                       });
@@ -212,14 +243,16 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
       _meetingError = _meetings.isEmpty;
     });
     if (!valid || _meetingError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请完成必填信息后再保存')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请完成必填信息后再保存')));
       return;
     }
 
     final course = Course(
-      id: widget.initial?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+      id:
+          widget.initial?.id ??
+          DateTime.now().microsecondsSinceEpoch.toString(),
       name: _nameController.text.trim(),
       classroom: _classroomController.text.trim(),
       location: _locationController.text.trim(),
@@ -234,12 +267,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.initial == null ? '新增课程' : '编辑课程'),
-        actions: [
-          TextButton(
-            onPressed: _save,
-            child: const Text('保存'),
-          ),
-        ],
+        actions: [TextButton(onPressed: _save, child: const Text('保存'))],
       ),
       body: Form(
         key: _formKey,
@@ -280,7 +308,10 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('上课时段', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const Text(
+                  '上课时段',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 FilledButton.tonalIcon(
                   onPressed: () => _editMeeting(),
                   icon: const Icon(Icons.add),
@@ -291,7 +322,10 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
             if (_meetingError)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text('至少需要一个上课时段', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                child: Text(
+                  '至少需要一个上课时段',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ),
             const SizedBox(height: 10),
             if (_meetings.isEmpty)
@@ -309,8 +343,12 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                     borderRadius: BorderRadius.circular(14),
                     color: Theme.of(context).colorScheme.surfaceContainerLow,
                     child: ListTile(
-                      title: Text('${_weekdayLabel(meeting.weekday)} 第${meeting.startSection}-${meeting.endSection}节'),
-                      subtitle: Text('${meeting.weekStart}-${meeting.weekEnd}周'),
+                      title: Text(
+                        '${_weekdayLabel(meeting.weekday)} 第${meeting.startSection}-${meeting.endSection}节',
+                      ),
+                      subtitle: Text(
+                        '${meeting.weekStart}-${meeting.weekEnd}周',
+                      ),
                       onTap: () => _editMeeting(meeting: meeting, index: index),
                       trailing: IconButton(
                         onPressed: () {

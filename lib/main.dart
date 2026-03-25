@@ -33,8 +33,14 @@ class _TodoAppState extends State<TodoApp> {
   @override
   Widget build(BuildContext context) {
     const seed = Color(0xFF0F766E);
-    final lightScheme = ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light);
-    final darkScheme = ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark);
+    final lightScheme = ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: Brightness.light,
+    );
+    final darkScheme = ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: Brightness.dark,
+    );
 
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: appThemeModeNotifier,
@@ -45,9 +51,7 @@ class _TodoAppState extends State<TodoApp> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          supportedLocales: const [
-            Locale('zh', 'CN'),
-          ],
+          supportedLocales: const [Locale('zh', 'CN')],
           title: 'TODO-List',
           debugShowCheckedModeBanner: false,
           themeMode: mode,
@@ -57,40 +61,52 @@ class _TodoAppState extends State<TodoApp> {
             textTheme: GoogleFonts.notoSansScTextTheme(),
             scaffoldBackgroundColor: const Color(0xFFF3F8F7),
             dialogTheme: DialogThemeData(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
             ),
-            bottomSheetTheme: const BottomSheetThemeData(
-              showDragHandle: true,
-            ),
+            bottomSheetTheme: const BottomSheetThemeData(showDragHandle: true),
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
-              fillColor: lightScheme.surfaceContainerHighest.withValues(alpha: 0.7),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              fillColor: lightScheme.surfaceContainerHighest.withValues(
+                alpha: 0.7,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             cardTheme: CardThemeData(
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
             colorScheme: darkScheme,
-            textTheme: GoogleFonts.notoSansScTextTheme(ThemeData(brightness: Brightness.dark).textTheme),
+            textTheme: GoogleFonts.notoSansScTextTheme(
+              ThemeData(brightness: Brightness.dark).textTheme,
+            ),
             scaffoldBackgroundColor: const Color(0xFF0F1516),
             dialogTheme: DialogThemeData(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
             ),
-            bottomSheetTheme: const BottomSheetThemeData(
-              showDragHandle: true,
-            ),
+            bottomSheetTheme: const BottomSheetThemeData(showDragHandle: true),
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
               fillColor: darkScheme.surfaceContainerHigh,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             cardTheme: CardThemeData(
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
           home: const AppShell(),

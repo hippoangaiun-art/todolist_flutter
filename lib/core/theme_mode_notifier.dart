@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-final ValueNotifier<ThemeMode> appThemeModeNotifier = ValueNotifier(ThemeMode.system);
+final ValueNotifier<ThemeMode> appThemeModeNotifier = ValueNotifier(
+  ThemeMode.system,
+);
 
 ThemeMode parseThemeMode(String mode) {
   switch (mode) {

@@ -56,7 +56,10 @@ class TodoRules {
     return todo.copyWith(completedDates: next, updatedAt: DateTime.now());
   }
 
-  static List<TodoOccurrence> resolveForDate(List<TodoItemV2> todos, DateTime targetDate) {
+  static List<TodoOccurrence> resolveForDate(
+    List<TodoItemV2> todos,
+    DateTime targetDate,
+  ) {
     final filtered = todos
         .where((todo) => isVisibleOnDate(todo, targetDate))
         .map(

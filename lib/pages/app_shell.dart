@@ -15,17 +15,10 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    const pages = [
-      TodoPage(),
-      SchedulePage(),
-      AboutPage(),
-    ];
+    const pages = [TodoPage(), SchedulePage(), AboutPage()];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {

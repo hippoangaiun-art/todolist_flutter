@@ -25,7 +25,9 @@ class ScheduleRules {
       return null;
     }
     final safeWeek = selectedWeek < 1 ? 1 : selectedWeek;
-    final start = normalize(firstWeekDate).add(Duration(days: (safeWeek - 1) * 7));
+    final start = normalize(
+      firstWeekDate,
+    ).add(Duration(days: (safeWeek - 1) * 7));
     return start.add(Duration(days: weekday - 1));
   }
 

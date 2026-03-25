@@ -94,7 +94,9 @@ class Course {
       name: json['name'] as String,
       classroom: json['classroom'] as String? ?? '',
       location: json['location'] as String? ?? '',
-      meetings: meetingsRaw.map((e) => CourseMeeting.fromJson(e as Map<String, dynamic>)).toList(),
+      meetings: meetingsRaw
+          .map((e) => CourseMeeting.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

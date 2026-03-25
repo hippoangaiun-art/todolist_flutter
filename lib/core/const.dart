@@ -18,12 +18,7 @@ class Todo {
   final int? weekday;
   final TimeOfDay? time;
 
-  Todo({
-    required this.title,
-    required this.done,
-    this.weekday,
-    this.time,
-  });
+  Todo({required this.title, required this.done, this.weekday, this.time});
 
   Map<String, dynamic> toJson() => {
     'title': title,
@@ -46,13 +41,23 @@ class Todo {
 }
 
 class Const {
-  static final githubUrl = 'https://github.com/hippoangaiun-art/todolist_flutter';
+  static final githubUrl =
+      'https://github.com/hippoangaiun-art/todolist_flutter';
 
-  static final todoLists = PrefField<String>('todolist', '[{"title":"Welcome","done":false,"weekday":1,"hour":9,"minute":0}]');
+  static final todoLists = PrefField<String>(
+    'todolist',
+    '[{"title":"Welcome","done":false,"weekday":1,"hour":9,"minute":0}]',
+  );
   static final todoListV2 = PrefField<String>('todos_v2', '[]');
   static final scheduleCourses = PrefField<String>('schedule_courses_v1', '[]');
-  static final scheduleSections = PrefField<String>('schedule_sections_v1', '[]');
-  static final scheduleSettings = PrefField<String>('schedule_settings_v1', '{}');
+  static final scheduleSections = PrefField<String>(
+    'schedule_sections_v1',
+    '[]',
+  );
+  static final scheduleSettings = PrefField<String>(
+    'schedule_settings_v1',
+    '{}',
+  );
 
   static final appName = 'ToDo List';
 }

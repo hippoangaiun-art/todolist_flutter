@@ -2,9 +2,7 @@ class TodoItemV2 {
   final String id;
   final String title;
   final bool done;
-  final DateTime date;
-  final List<int> repeatWeekdays;
-  final List<String> completedDates;
+  final DateTime endAt;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -12,9 +10,7 @@ class TodoItemV2 {
     required this.id,
     required this.title,
     required this.done,
-    required this.date,
-    required this.repeatWeekdays,
-    required this.completedDates,
+    required this.endAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -23,9 +19,7 @@ class TodoItemV2 {
     String? id,
     String? title,
     bool? done,
-    DateTime? date,
-    List<int>? repeatWeekdays,
-    List<String>? completedDates,
+    DateTime? endAt,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -33,9 +27,7 @@ class TodoItemV2 {
       id: id ?? this.id,
       title: title ?? this.title,
       done: done ?? this.done,
-      date: date ?? this.date,
-      repeatWeekdays: repeatWeekdays ?? this.repeatWeekdays,
-      completedDates: completedDates ?? this.completedDates,
+      endAt: endAt ?? this.endAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -45,27 +37,19 @@ class TodoItemV2 {
     'id': id,
     'title': title,
     'done': done,
-    'date': date.toIso8601String(),
-    'repeatWeekdays': repeatWeekdays,
-    'completedDates': completedDates,
+    'endAt': endAt.toIso8601String(),
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
 
   factory TodoItemV2.fromJson(Map<String, dynamic> json) {
-    final repeat = (json['repeatWeekdays'] as List<dynamic>? ?? const [])
-        .map((e) => e as int)
-        .toList();
-    final completed = (json['completedDates'] as List<dynamic>? ?? const [])
-        .map((e) => e as String)
-        .toList();
+    final rawEndAt = json['endAt'] as String? ?? json['date'] as String?;
+    final fallback = DateTime.now();
     return TodoItemV2(
       id: json['id'] as String,
       title: json['title'] as String,
       done: json['done'] as bool? ?? false,
-      date: DateTime.parse(json['date'] as String),
-      repeatWeekdays: repeat,
-      completedDates: completed,
+      endAt: rawEndAt == null ? fallback : DateTime.parse(rawEndAt),
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );

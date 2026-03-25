@@ -46,6 +46,10 @@ class _TodoPageState extends State<TodoPage> {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
+  String _formatTime(DateTime date) {
+    return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
   String _weekdayLabel(int weekday) {
     const labels = ['一', '二', '三', '四', '五', '六', '日'];
     return '周${labels[weekday - 1]}';
@@ -67,21 +71,47 @@ class _TodoPageState extends State<TodoPage> {
     });
   }
 
-  Future<void> _toggleDone(TodoOccurrence occurrence) async {
-    final idx = _todos.indexWhere((e) => e.id == occurrence.todo.id);
+  Future<DateTime?> _pickEndAt(DateTime initial) async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      locale: const Locale('zh', 'CN'),
+    );
+    if (pickedDate == null || !mounted) {
+      return null;
+    }
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: initial.hour, minute: initial.minute),
+    );
+    if (pickedTime == null) {
+      return null;
+    }
+    return DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+  }
+
+  Future<void> _toggleDone(TodoItemV2 todo) async {
+    final idx = _todos.indexWhere((e) => e.id == todo.id);
     if (idx < 0) {
       return;
     }
     setState(() {
-      _todos[idx] = TodoRules.toggleDoneOnDate(_todos[idx], occurrence.date);
+      _todos[idx] = TodoRules.toggleDone(_todos[idx]);
     });
     await _saveTodos();
   }
 
   Future<void> _showEditDialog({TodoItemV2? todo}) async {
     final titleController = TextEditingController(text: todo?.title ?? '');
-    DateTime selectedDate = TodoRules.normalize(todo?.date ?? _selectedDate);
-    final selectedRepeat = <int>{...todo?.repeatWeekdays ?? const <int>[]};
+    DateTime selectedEndAt = todo?.endAt ?? DateTime.now();
 
     await showDialog(
       context: context,
@@ -106,48 +136,20 @@ class _TodoPageState extends State<TodoPage> {
                     const SizedBox(height: 12),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('日期'),
-                      subtitle: Text(_formatDate(selectedDate)),
-                      trailing: const Icon(Icons.calendar_month),
+                      title: const Text('结束时间'),
+                      subtitle: Text(
+                        '${_formatDate(selectedEndAt)} ${_formatTime(selectedEndAt)}',
+                      ),
+                      trailing: const Icon(Icons.schedule),
                       onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                          locale: const Locale('zh', 'CN'),
-                        );
+                        final picked = await _pickEndAt(selectedEndAt);
                         if (picked == null) {
                           return;
                         }
                         setDialogState(() {
-                          selectedDate = TodoRules.normalize(picked);
+                          selectedEndAt = picked;
                         });
                       },
-                    ),
-                    const SizedBox(height: 8),
-                    const Text('每周重复'),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: List.generate(7, (index) {
-                        final weekday = index + 1;
-                        final selected = selectedRepeat.contains(weekday);
-                        return FilterChip(
-                          label: Text(_weekdayLabel(weekday)),
-                          selected: selected,
-                          onSelected: (value) {
-                            setDialogState(() {
-                              if (value) {
-                                selectedRepeat.add(weekday);
-                              } else {
-                                selectedRepeat.remove(weekday);
-                              }
-                            });
-                          },
-                        );
-                      }),
                     ),
                   ],
                 ),
@@ -171,9 +173,7 @@ class _TodoPageState extends State<TodoPage> {
                             id: now.microsecondsSinceEpoch.toString(),
                             title: title,
                             done: false,
-                            date: selectedDate,
-                            repeatWeekdays: selectedRepeat.toList()..sort(),
-                            completedDates: const [],
+                            endAt: selectedEndAt,
                             createdAt: now,
                             updatedAt: now,
                           ),
@@ -184,8 +184,7 @@ class _TodoPageState extends State<TodoPage> {
                         if (idx >= 0) {
                           _todos[idx] = _todos[idx].copyWith(
                             title: title,
-                            date: selectedDate,
-                            repeatWeekdays: selectedRepeat.toList()..sort(),
+                            endAt: selectedEndAt,
                             updatedAt: now,
                           );
                         }
@@ -214,7 +213,7 @@ class _TodoPageState extends State<TodoPage> {
     await _saveTodos();
   }
 
-  List<TodoOccurrence> _applyFilter(List<TodoOccurrence> list) {
+  List<TodoItemV2> _applyFilter(List<TodoItemV2> list) {
     switch (_filter) {
       case _TodoFilter.all:
         return list;
@@ -252,10 +251,10 @@ class _TodoPageState extends State<TodoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final allOccurrences = TodoRules.resolveForDate(_todos, _selectedDate);
-    final occurrences = _applyFilter(allOccurrences);
-    final doneCount = allOccurrences.where((e) => e.done).length;
-    final activeCount = allOccurrences.length - doneCount;
+    final allTodos = TodoRules.resolveForDate(_todos, _selectedDate);
+    final todos = _applyFilter(allTodos);
+    final doneCount = allTodos.where((e) => e.done).length;
+    final activeCount = allTodos.length - doneCount;
 
     return Scaffold(
       appBar: AppBar(
@@ -341,7 +340,7 @@ class _TodoPageState extends State<TodoPage> {
                               Expanded(
                                 child: _buildStat(
                                   '总数',
-                                  allOccurrences.length.toString(),
+                                  allTodos.length.toString(),
                                 ),
                               ),
                               Expanded(
@@ -386,7 +385,7 @@ class _TodoPageState extends State<TodoPage> {
                   Expanded(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
-                      child: occurrences.isEmpty
+                      child: todos.isEmpty
                           ? const Center(
                               key: ValueKey('todo-empty'),
                               child: Column(
@@ -406,12 +405,11 @@ class _TodoPageState extends State<TodoPage> {
                                 16,
                                 100,
                               ),
-                              itemCount: occurrences.length,
+                              itemCount: todos.length,
                               separatorBuilder: (_, _) =>
                                   const SizedBox(height: 10),
                               itemBuilder: (context, index) {
-                                final occurrence = occurrences[index];
-                                final todo = occurrence.todo;
+                                final todo = todos[index];
                                 return TweenAnimationBuilder<double>(
                                   tween: Tween(begin: 0, end: 1),
                                   duration: Duration(
@@ -427,9 +425,7 @@ class _TodoPageState extends State<TodoPage> {
                                     );
                                   },
                                   child: Dismissible(
-                                    key: ValueKey(
-                                      '${todo.id}_${occurrence.date.toIso8601String()}',
-                                    ),
+                                    key: ValueKey(todo.id),
                                     direction: DismissDirection.endToStart,
                                     onDismissed: (_) {
                                       _deleteTodo(todo);
@@ -454,17 +450,16 @@ class _TodoPageState extends State<TodoPage> {
                                       color: _softSurfaceStrong(context),
                                       borderRadius: BorderRadius.circular(16),
                                       child: InkWell(
-                                        onTap: () =>
-                                            _showEditDialog(todo: todo),
+                                        onTap: () => _showEditDialog(todo: todo),
                                         borderRadius: BorderRadius.circular(16),
                                         child: Padding(
                                           padding: const EdgeInsets.all(14),
                                           child: Row(
                                             children: [
                                               Checkbox(
-                                                value: occurrence.done,
+                                                value: todo.done,
                                                 onChanged: (_) =>
-                                                    _toggleDone(occurrence),
+                                                    _toggleDone(todo),
                                               ),
                                               const SizedBox(width: 10),
                                               Expanded(
@@ -479,8 +474,7 @@ class _TodoPageState extends State<TodoPage> {
                                                           TextOverflow.ellipsis,
                                                       style: TextStyle(
                                                         fontSize: 16,
-                                                        decoration:
-                                                            occurrence.done
+                                                        decoration: todo.done
                                                             ? TextDecoration
                                                                   .lineThrough
                                                             : null,
@@ -494,25 +488,15 @@ class _TodoPageState extends State<TodoPage> {
                                                         _buildTag(
                                                           context,
                                                           _formatDate(
-                                                            TodoRules.normalize(
-                                                              todo.date,
-                                                            ),
+                                                            todo.endAt,
                                                           ),
                                                         ),
-                                                        if (todo
-                                                            .repeatWeekdays
-                                                            .isNotEmpty)
-                                                          ...todo.repeatWeekdays
-                                                              .map(
-                                                                (
-                                                                  e,
-                                                                ) => _buildTag(
-                                                                  context,
-                                                                  _weekdayLabel(
-                                                                    e,
-                                                                  ),
-                                                                ),
-                                                              ),
+                                                        _buildTag(
+                                                          context,
+                                                          _formatTime(
+                                                            todo.endAt,
+                                                          ),
+                                                        ),
                                                       ],
                                                     ),
                                                   ],

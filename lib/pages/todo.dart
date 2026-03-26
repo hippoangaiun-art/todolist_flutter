@@ -6,6 +6,7 @@ import 'package:todolist/models/todo_item_v2.dart';
 import 'package:todolist/widgets/gradient_background.dart';
 
 enum _TodoFilter { all, active, done }
+enum _TodoViewMode { all, byDate }
 
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
@@ -20,6 +21,7 @@ class _TodoPageState extends State<TodoPage> {
   bool _loading = true;
   DateTime _selectedDate = TodoRules.normalize(DateTime.now());
   _TodoFilter _filter = _TodoFilter.all;
+  _TodoViewMode _viewMode = _TodoViewMode.all;
 
   @override
   void initState() {
@@ -251,7 +253,9 @@ class _TodoPageState extends State<TodoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final allTodos = TodoRules.resolveForDate(_todos, _selectedDate);
+    final allTodos = _viewMode == _TodoViewMode.all
+        ? TodoRules.sortByEndAt(_todos)
+        : TodoRules.resolveForDate(_todos, _selectedDate);
     final todos = _applyFilter(allTodos);
     final doneCount = allTodos.where((e) => e.done).length;
     final activeCount = allTodos.length - doneCount;
@@ -273,60 +277,91 @@ class _TodoPageState extends State<TodoPage> {
                       children: [
                         Row(
                           children: [
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedDate = _selectedDate.subtract(
-                                    const Duration(days: 1),
-                                  );
-                                });
-                              },
-                              icon: const Icon(Icons.chevron_left),
-                            ),
                             Expanded(
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: _pickDate,
-                                child: Ink(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    color: _softSurface(context),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.today_outlined,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '${_formatDate(_selectedDate)} ${_weekdayLabel(_selectedDate.weekday)}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              child: ChoiceChip(
+                                label: const Text('全部'),
+                                selected: _viewMode == _TodoViewMode.all,
+                                onSelected: (_) {
+                                  setState(() {
+                                    _viewMode = _TodoViewMode.all;
+                                  });
+                                },
                               ),
                             ),
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedDate = _selectedDate.add(
-                                    const Duration(days: 1),
-                                  );
-                                });
-                              },
-                              icon: const Icon(Icons.chevron_right),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Text('按日期'),
+                                selected: _viewMode == _TodoViewMode.byDate,
+                                onSelected: (_) {
+                                  setState(() {
+                                    _viewMode = _TodoViewMode.byDate;
+                                  });
+                                },
+                              ),
                             ),
                           ],
                         ),
+                        if (_viewMode == _TodoViewMode.byDate) ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedDate = _selectedDate.subtract(
+                                      const Duration(days: 1),
+                                    );
+                                  });
+                                },
+                                icon: const Icon(Icons.chevron_left),
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: _pickDate,
+                                  child: Ink(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      color: _softSurface(context),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.today_outlined,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${_formatDate(_selectedDate)} ${_weekdayLabel(_selectedDate.weekday)}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedDate = _selectedDate.add(
+                                      const Duration(days: 1),
+                                    );
+                                  });
+                                },
+                                icon: const Icon(Icons.chevron_right),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.all(14),
@@ -393,7 +428,7 @@ class _TodoPageState extends State<TodoPage> {
                                 children: [
                                   Icon(Icons.inbox_outlined, size: 42),
                                   SizedBox(height: 8),
-                                  Text('这一天暂无待办'),
+                                  Text('暂无待办'),
                                 ],
                               ),
                             )

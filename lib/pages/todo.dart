@@ -17,16 +17,25 @@ class TodoPage extends StatefulWidget {
 
 class _TodoPageState extends State<TodoPage> {
   final TodoRepository _repository = TodoRepository();
+  final TextEditingController _searchController = TextEditingController();
   List<TodoItemV2> _todos = const [];
   bool _loading = true;
+  bool _completedExpanded = false;
   DateTime _selectedDate = TodoRules.normalize(DateTime.now());
   _TodoFilter _filter = _TodoFilter.all;
   _TodoViewMode _viewMode = _TodoViewMode.all;
+  String _searchKeyword = '';
 
   @override
   void initState() {
     super.initState();
     _loadTodos();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTodos() async {
@@ -226,6 +235,16 @@ class _TodoPageState extends State<TodoPage> {
     }
   }
 
+  List<TodoItemV2> _applySearch(List<TodoItemV2> list) {
+    final keyword = _searchKeyword.trim().toLowerCase();
+    if (keyword.isEmpty) {
+      return list;
+    }
+    return list
+        .where((todo) => todo.title.toLowerCase().contains(keyword))
+        .toList();
+  }
+
   Color _softSurface(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     if (Theme.of(context).brightness == Brightness.dark) {
@@ -251,12 +270,179 @@ class _TodoPageState extends State<TodoPage> {
     ];
   }
 
+  Widget _buildTodoTile(TodoItemV2 todo, int index) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: Duration(milliseconds: 180 + index * 30),
+        builder: (context, value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 10 * (1 - value)),
+              child: child,
+            ),
+          );
+        },
+        child: Dismissible(
+          key: ValueKey(todo.id),
+          direction: DismissDirection.endToStart,
+          onDismissed: (_) {
+            _deleteTodo(todo);
+          },
+          background: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.error,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 16),
+            child: Icon(
+              Icons.delete,
+              color: Theme.of(context).colorScheme.onError,
+            ),
+          ),
+          child: Material(
+            color: _softSurfaceStrong(context),
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              onTap: () => _showEditDialog(todo: todo),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: todo.done,
+                      onChanged: (_) => _toggleDone(todo),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            todo.title,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 16,
+                              decoration:
+                                  todo.done ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              _buildTag(context, _formatDate(todo.endAt)),
+                              _buildTag(context, _formatTime(todo.endAt)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTodoList(List<TodoItemV2> todos) {
+    if (todos.isEmpty) {
+      return const Center(
+        key: ValueKey('todo-empty'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.inbox_outlined, size: 42),
+            SizedBox(height: 8),
+            Text('暂无待办'),
+          ],
+        ),
+      );
+    }
+
+    if (_filter != _TodoFilter.all) {
+      return ListView(
+        key: const ValueKey('todo-list-filtered'),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+        children: [
+          ...todos.asMap().entries.map(
+                (entry) => _buildTodoTile(entry.value, entry.key),
+              ),
+        ],
+      );
+    }
+
+    final activeTodos = todos.where((e) => !e.done).toList();
+    final doneTodos = todos.where((e) => e.done).toList();
+
+    return ListView(
+      key: const ValueKey('todo-list-grouped'),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      children: [
+        ...activeTodos.asMap().entries.map(
+              (entry) => _buildTodoTile(entry.value, entry.key),
+            ),
+        if (doneTodos.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Material(
+            color: _softSurfaceStrong(context),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                setState(() {
+                  _completedExpanded = !_completedExpanded;
+                });
+              },
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text('已完成事项 (${doneTodos.length})')),
+                    Icon(
+                      _completedExpanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_completedExpanded) ...[
+            const SizedBox(height: 10),
+            ...doneTodos.asMap().entries.map(
+                  (entry) => _buildTodoTile(
+                    entry.value,
+                    activeTodos.length + entry.key,
+                  ),
+                ),
+          ],
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final allTodos = _viewMode == _TodoViewMode.all
         ? TodoRules.sortByEndAt(_todos)
         : TodoRules.resolveForDate(_todos, _selectedDate);
-    final todos = _applyFilter(allTodos);
+    final searchedTodos = _applySearch(allTodos);
+    final filteredTodos = _applyFilter(searchedTodos);
     final doneCount = allTodos.where((e) => e.done).length;
     final activeCount = allTodos.length - doneCount;
 
@@ -363,6 +549,30 @@ class _TodoPageState extends State<TodoPage> {
                           ),
                         ],
                         const SizedBox(height: 10),
+                        TextField(
+                          controller: _searchController,
+                          onChanged: (value) {
+                            setState(() {
+                              _searchKeyword = value;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.search),
+                            hintText: '搜索待办标题',
+                            suffixIcon: _searchKeyword.isEmpty
+                                ? null
+                                : IconButton(
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        _searchKeyword = '';
+                                      });
+                                    },
+                                    icon: const Icon(Icons.clear),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
@@ -373,16 +583,10 @@ class _TodoPageState extends State<TodoPage> {
                           child: Row(
                             children: [
                               Expanded(
-                                child: _buildStat(
-                                  '总数',
-                                  allTodos.length.toString(),
-                                ),
+                                child: _buildStat('总数', allTodos.length.toString()),
                               ),
                               Expanded(
-                                child: _buildStat(
-                                  '进行中',
-                                  activeCount.toString(),
-                                ),
+                                child: _buildStat('进行中', activeCount.toString()),
                               ),
                               Expanded(
                                 child: _buildStat('已完成', doneCount.toString()),
@@ -397,20 +601,29 @@ class _TodoPageState extends State<TodoPage> {
                             ChoiceChip(
                               label: const Text('全部'),
                               selected: _filter == _TodoFilter.all,
-                              onSelected: (_) =>
-                                  setState(() => _filter = _TodoFilter.all),
+                              onSelected: (_) {
+                                setState(() {
+                                  _filter = _TodoFilter.all;
+                                });
+                              },
                             ),
                             ChoiceChip(
                               label: const Text('未完成'),
                               selected: _filter == _TodoFilter.active,
-                              onSelected: (_) =>
-                                  setState(() => _filter = _TodoFilter.active),
+                              onSelected: (_) {
+                                setState(() {
+                                  _filter = _TodoFilter.active;
+                                });
+                              },
                             ),
                             ChoiceChip(
                               label: const Text('已完成'),
                               selected: _filter == _TodoFilter.done,
-                              onSelected: (_) =>
-                                  setState(() => _filter = _TodoFilter.done),
+                              onSelected: (_) {
+                                setState(() {
+                                  _filter = _TodoFilter.done;
+                                });
+                              },
                             ),
                           ],
                         ),
@@ -420,133 +633,7 @@ class _TodoPageState extends State<TodoPage> {
                   Expanded(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
-                      child: todos.isEmpty
-                          ? const Center(
-                              key: ValueKey('todo-empty'),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.inbox_outlined, size: 42),
-                                  SizedBox(height: 8),
-                                  Text('暂无待办'),
-                                ],
-                              ),
-                            )
-                          : ListView.separated(
-                              key: const ValueKey('todo-list'),
-                              padding: const EdgeInsets.fromLTRB(
-                                16,
-                                8,
-                                16,
-                                100,
-                              ),
-                              itemCount: todos.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 10),
-                              itemBuilder: (context, index) {
-                                final todo = todos[index];
-                                return TweenAnimationBuilder<double>(
-                                  tween: Tween(begin: 0, end: 1),
-                                  duration: Duration(
-                                    milliseconds: 180 + index * 40,
-                                  ),
-                                  builder: (context, value, child) {
-                                    return Opacity(
-                                      opacity: value,
-                                      child: Transform.translate(
-                                        offset: Offset(0, 10 * (1 - value)),
-                                        child: child,
-                                      ),
-                                    );
-                                  },
-                                  child: Dismissible(
-                                    key: ValueKey(todo.id),
-                                    direction: DismissDirection.endToStart,
-                                    onDismissed: (_) {
-                                      _deleteTodo(todo);
-                                    },
-                                    background: Container(
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.error,
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      alignment: Alignment.centerRight,
-                                      padding: const EdgeInsets.only(right: 16),
-                                      child: Icon(
-                                        Icons.delete,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onError,
-                                      ),
-                                    ),
-                                    child: Material(
-                                      color: _softSurfaceStrong(context),
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: InkWell(
-                                        onTap: () => _showEditDialog(todo: todo),
-                                        borderRadius: BorderRadius.circular(16),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(14),
-                                          child: Row(
-                                            children: [
-                                              Checkbox(
-                                                value: todo.done,
-                                                onChanged: (_) =>
-                                                    _toggleDone(todo),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      todo.title,
-                                                      maxLines: 3,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        decoration: todo.done
-                                                            ? TextDecoration
-                                                                  .lineThrough
-                                                            : null,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 6),
-                                                    Wrap(
-                                                      spacing: 6,
-                                                      runSpacing: 6,
-                                                      children: [
-                                                        _buildTag(
-                                                          context,
-                                                          _formatDate(
-                                                            todo.endAt,
-                                                          ),
-                                                        ),
-                                                        _buildTag(
-                                                          context,
-                                                          _formatTime(
-                                                            todo.endAt,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              const Icon(Icons.chevron_right),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                      child: _buildTodoList(filteredTodos),
                     ),
                   ),
                 ],

@@ -17,6 +17,7 @@ class TodoRules {
 
   static List<TodoItemV2> sortByEndAt(List<TodoItemV2> todos) {
     final sorted = [...todos];
+    // Keep unfinished items first, then order by deadline.
     sorted.sort((a, b) {
       if (a.done != b.done) {
         return a.done ? 1 : -1;

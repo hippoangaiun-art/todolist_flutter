@@ -78,7 +78,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<int>(
-                      value: selectedWeekday,
+                      initialValue: selectedWeekday,
                       decoration: const InputDecoration(labelText: '星期'),
                       items: List.generate(7, (i) {
                         final weekday = i + 1;
@@ -101,7 +101,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: startSection,
+                            initialValue: startSection,
                             decoration: const InputDecoration(
                               labelText: '起始节次',
                             ),
@@ -109,7 +109,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                                 .map(
                                   (n) => DropdownMenuItem(
                                     value: n,
-                                    child: Text('第${n}节'),
+                                    child: Text('第$n节'),
                                   ),
                                 )
                                 .toList(),
@@ -129,7 +129,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: endSection,
+                            initialValue: endSection,
                             decoration: const InputDecoration(
                               labelText: '结束节次',
                             ),
@@ -137,7 +137,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                                 .map(
                                   (n) => DropdownMenuItem(
                                     value: n,
-                                    child: Text('第${n}节'),
+                                    child: Text('第$n节'),
                                   ),
                                 )
                                 .toList(),

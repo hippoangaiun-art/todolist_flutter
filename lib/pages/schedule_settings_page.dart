@@ -89,52 +89,36 @@ class _ScheduleSettingsPageState extends State<ScheduleSettingsPage> {
           Material(
             color: Theme.of(context).colorScheme.surfaceContainer,
             borderRadius: BorderRadius.circular(16),
-            child: Column(
-              children: [
-                ListTile(
-                  title: const Text('主题模式'),
-                  subtitle: Text(_modeLabel(_themeMode)),
-                ),
-                RadioListTile<ThemeMode>(
-                  value: ThemeMode.system,
-                  groupValue: _themeMode,
-                  title: const Text('跟随系统'),
-                  onChanged: (value) {
-                    if (value == null) {
-                      return;
-                    }
-                    setState(() {
-                      _themeMode = value;
-                    });
-                  },
-                ),
-                RadioListTile<ThemeMode>(
-                  value: ThemeMode.light,
-                  groupValue: _themeMode,
-                  title: const Text('浅色模式'),
-                  onChanged: (value) {
-                    if (value == null) {
-                      return;
-                    }
-                    setState(() {
-                      _themeMode = value;
-                    });
-                  },
-                ),
-                RadioListTile<ThemeMode>(
-                  value: ThemeMode.dark,
-                  groupValue: _themeMode,
-                  title: const Text('深色模式'),
-                  onChanged: (value) {
-                    if (value == null) {
-                      return;
-                    }
-                    setState(() {
-                      _themeMode = value;
-                    });
-                  },
-                ),
-              ],
+            child: RadioGroup<ThemeMode>(
+              groupValue: _themeMode,
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+                setState(() {
+                  _themeMode = value;
+                });
+              },
+              child: Column(
+                children: [
+                  ListTile(
+                    title: const Text('主题模式'),
+                    subtitle: Text(_modeLabel(_themeMode)),
+                  ),
+                  const RadioListTile<ThemeMode>(
+                    value: ThemeMode.system,
+                    title: Text('跟随系统'),
+                  ),
+                  const RadioListTile<ThemeMode>(
+                    value: ThemeMode.light,
+                    title: Text('浅色模式'),
+                  ),
+                  const RadioListTile<ThemeMode>(
+                    value: ThemeMode.dark,
+                    title: Text('深色模式'),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),

@@ -269,6 +269,7 @@ class _TodoPageState extends State<TodoPage> {
     if (keyword.isEmpty) {
       return list;
     }
+    // Search keeps behavior predictable by matching title only.
     return list
         .where((todo) => todo.title.toLowerCase().contains(keyword))
         .toList();
@@ -414,6 +415,7 @@ class _TodoPageState extends State<TodoPage> {
     final activeTodos = todos.where((e) => !e.done).toList();
     final doneTodos = todos.where((e) => e.done).toList();
 
+    // In "all" filter, completed items are grouped in a collapsible section.
     return ListView(
       key: const ValueKey('todo-list-grouped'),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),

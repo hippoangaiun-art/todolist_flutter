@@ -116,6 +116,7 @@ class _TodoPageState extends State<TodoPage> {
     }
     setState(() {
       _todos[idx] = TodoRules.toggleDone(_todos[idx]);
+      _completedExpanded = false;
     });
     await _saveTodos();
   }
@@ -200,6 +201,7 @@ class _TodoPageState extends State<TodoPage> {
                           );
                         }
                       }
+                      _completedExpanded = false;
                     });
                     await _saveTodos();
                     if (!context.mounted) {
@@ -218,10 +220,37 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   Future<void> _deleteTodo(TodoItemV2 todo) async {
+    final removedIndex = _todos.indexWhere((e) => e.id == todo.id);
+    if (removedIndex < 0) {
+      return;
+    }
+    final removed = _todos[removedIndex];
     setState(() {
-      _todos.removeWhere((e) => e.id == todo.id);
+      _todos.removeAt(removedIndex);
+      _completedExpanded = false;
     });
     await _saveTodos();
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('已删除待办'),
+        action: SnackBarAction(
+          label: '撤销',
+          onPressed: () async {
+            if (!mounted) {
+              return;
+            }
+            setState(() {
+              _todos.insert(removedIndex, removed);
+            });
+            await _saveTodos();
+          },
+        ),
+      ),
+    );
   }
 
   List<TodoItemV2> _applyFilter(List<TodoItemV2> list) {
@@ -470,6 +499,7 @@ class _TodoPageState extends State<TodoPage> {
                                 onSelected: (_) {
                                   setState(() {
                                     _viewMode = _TodoViewMode.all;
+                                    _completedExpanded = false;
                                   });
                                 },
                               ),
@@ -482,6 +512,7 @@ class _TodoPageState extends State<TodoPage> {
                                 onSelected: (_) {
                                   setState(() {
                                     _viewMode = _TodoViewMode.byDate;
+                                    _completedExpanded = false;
                                   });
                                 },
                               ),
@@ -554,6 +585,7 @@ class _TodoPageState extends State<TodoPage> {
                           onChanged: (value) {
                             setState(() {
                               _searchKeyword = value;
+                              _completedExpanded = false;
                             });
                           },
                           decoration: InputDecoration(
@@ -566,6 +598,7 @@ class _TodoPageState extends State<TodoPage> {
                                       _searchController.clear();
                                       setState(() {
                                         _searchKeyword = '';
+                                        _completedExpanded = false;
                                       });
                                     },
                                     icon: const Icon(Icons.clear),
@@ -604,6 +637,7 @@ class _TodoPageState extends State<TodoPage> {
                               onSelected: (_) {
                                 setState(() {
                                   _filter = _TodoFilter.all;
+                                  _completedExpanded = false;
                                 });
                               },
                             ),
@@ -613,6 +647,7 @@ class _TodoPageState extends State<TodoPage> {
                               onSelected: (_) {
                                 setState(() {
                                   _filter = _TodoFilter.active;
+                                  _completedExpanded = false;
                                 });
                               },
                             ),
@@ -622,6 +657,7 @@ class _TodoPageState extends State<TodoPage> {
                               onSelected: (_) {
                                 setState(() {
                                   _filter = _TodoFilter.done;
+                                  _completedExpanded = false;
                                 });
                               },
                             ),

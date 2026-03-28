@@ -4,61 +4,50 @@ import 'package:todolist/models/todo_item_v2.dart';
 
 void main() {
   TodoItemV2 createTodo({
-    required DateTime date,
-    required List<int> repeatWeekdays,
+    required String id,
+    required DateTime endAt,
     bool done = false,
-    List<String> completedDates = const [],
   }) {
-    final now = DateTime(2026, 3, 24, 10);
+    final now = DateTime(2026, 3, 24, 10, 0);
     return TodoItemV2(
-      id: '1',
-      title: 'todo',
+      id: id,
+      title: id,
       done: done,
-      date: date,
-      repeatWeekdays: repeatWeekdays,
-      completedDates: completedDates,
+      endAt: endAt,
       createdAt: now,
       updatedAt: now,
     );
   }
 
-  test('重复任务在开始日期前不显示', () {
-    final todo = createTodo(
-      date: DateTime(2026, 3, 20),
-      repeatWeekdays: const [1, 5],
+  test('结束时间排序遵循未完成优先并按时间升序', () {
+    final morning = createTodo(id: 'morning', endAt: DateTime(2026, 3, 24, 9));
+    final noon = createTodo(id: 'noon', endAt: DateTime(2026, 3, 24, 12));
+    final doneEarly = createTodo(
+      id: 'doneEarly',
+      endAt: DateTime(2026, 3, 24, 8),
+      done: true,
     );
 
-    final visibleBefore = TodoRules.isVisibleOnDate(
-      todo,
-      DateTime(2026, 3, 16),
-    );
-    final visibleAfter = TodoRules.isVisibleOnDate(todo, DateTime(2026, 3, 23));
+    final sorted = TodoRules.sortByEndAt([noon, doneEarly, morning]);
 
-    expect(visibleBefore, false);
-    expect(visibleAfter, true);
+    expect(sorted.map((e) => e.id).toList(), ['morning', 'noon', 'doneEarly']);
   });
 
-  test('重复任务完成状态按日期存储不会回退', () {
-    final todo = createTodo(
-      date: DateTime(2026, 3, 20),
-      repeatWeekdays: const [1],
-    );
+  test('按日期模式仅返回目标日期的待办', () {
+    final todoA = createTodo(id: 'a', endAt: DateTime(2026, 3, 24, 9));
+    final todoB = createTodo(id: 'b', endAt: DateTime(2026, 3, 25, 9));
 
-    final doneOn24 = TodoRules.toggleDoneOnDate(todo, DateTime(2026, 3, 24));
+    final result = TodoRules.resolveForDate([todoA, todoB], DateTime(2026, 3, 24));
 
-    expect(TodoRules.isDoneOnDate(doneOn24, DateTime(2026, 3, 24)), true);
-    expect(TodoRules.isDoneOnDate(doneOn24, DateTime(2026, 3, 31)), false);
+    expect(result.length, 1);
+    expect(result.first.id, 'a');
   });
 
-  test('单次任务使用全局完成状态', () {
-    final todo = createTodo(
-      date: DateTime(2026, 3, 24),
-      repeatWeekdays: const [],
-      done: false,
-    );
+  test('切换完成状态后 done 字段应翻转', () {
+    final todo = createTodo(id: 'x', endAt: DateTime(2026, 3, 24, 11));
 
-    final toggled = TodoRules.toggleDoneOnDate(todo, DateTime(2026, 3, 24));
+    final toggled = TodoRules.toggleDone(todo);
+
     expect(toggled.done, true);
-    expect(TodoRules.isDoneOnDate(toggled, DateTime(2026, 3, 25)), true);
   });
 }

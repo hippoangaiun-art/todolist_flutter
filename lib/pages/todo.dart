@@ -4,6 +4,7 @@ import 'package:todolist/core/todo_rules.dart';
 import 'package:todolist/data/todo_repository.dart';
 import 'package:todolist/models/todo_item_v2.dart';
 import 'package:todolist/widgets/gradient_background.dart';
+import 'package:todolist/widgets/surface_style.dart';
 
 enum _TodoFilter { all, active, done }
 enum _TodoViewMode { all, byDate }
@@ -291,15 +292,6 @@ class _TodoPageState extends State<TodoPage> {
     return Colors.white.withValues(alpha: 0.9);
   }
 
-  List<BoxShadow> _shadowForTheme(BuildContext context) {
-    if (Theme.of(context).brightness == Brightness.dark) {
-      return const [];
-    }
-    return const [
-      BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8)),
-    ];
-  }
-
   Widget _buildTodoTile(TodoItemV2 todo, int index) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -333,53 +325,117 @@ class _TodoPageState extends State<TodoPage> {
               color: Theme.of(context).colorScheme.onError,
             ),
           ),
-          child: Material(
-            color: _softSurfaceStrong(context),
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              onTap: () => _showEditDialog(todo: todo),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    Checkbox(
-                      value: todo.done,
-                      onChanged: (_) => _toggleDone(todo),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            todo.title,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 16,
-                              decoration:
-                                  todo.done ? TextDecoration.lineThrough : null,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              _buildTag(context, _formatDate(todo.endAt)),
-                              _buildTag(context, _formatTime(todo.endAt)),
-                            ],
-                          ),
-                        ],
+              border: SurfaceStyle.cardBorder(context),
+              boxShadow: SurfaceStyle.cardShadow(context),
+            ),
+            child: Material(
+              color: _softSurfaceStrong(context),
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                onTap: () => _showEditDialog(todo: todo),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: todo.done,
+                        onChanged: (_) => _toggleDone(todo),
                       ),
-                    ),
-                    const Icon(Icons.chevron_right),
-                  ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              todo.title,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 16,
+                                decoration: todo.done
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                _buildTag(context, _formatDate(todo.endAt)),
+                                _buildTag(context, _formatTime(todo.endAt)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: SurfaceStyle.cardBorder(context),
+        boxShadow: SurfaceStyle.cardShadow(context),
+      ),
+      child: Material(
+        color: _softSurfaceStrong(context),
+        borderRadius: BorderRadius.circular(18),
+        child: Row(
+          children: [
+            const SizedBox(width: 12),
+            Icon(
+              Icons.search_rounded,
+              size: 20,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() {
+                    _searchKeyword = value;
+                    _completedExpanded = false;
+                  });
+                },
+                decoration: const InputDecoration(
+                  hintText: '搜索待办标题',
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            if (_searchKeyword.isNotEmpty)
+              IconButton(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() {
+                    _searchKeyword = '';
+                    _completedExpanded = false;
+                  });
+                },
+                icon: const Icon(Icons.cancel_outlined),
+                splashRadius: 20,
+              ),
+          ],
         ),
       ),
     );
@@ -425,30 +481,37 @@ class _TodoPageState extends State<TodoPage> {
             ),
         if (doneTodos.isNotEmpty) ...[
           const SizedBox(height: 6),
-          Material(
-            color: _softSurfaceStrong(context),
-            borderRadius: BorderRadius.circular(14),
-            child: InkWell(
+          DecoratedBox(
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              onTap: () {
-                setState(() {
-                  _completedExpanded = !_completedExpanded;
-                });
-              },
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle_outline),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text('已完成事项 (${doneTodos.length})')),
-                    Icon(
-                      _completedExpanded
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                    ),
-                  ],
+              border: SurfaceStyle.cardBorder(context),
+              boxShadow: SurfaceStyle.cardShadow(context),
+            ),
+            child: Material(
+              color: _softSurfaceStrong(context),
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  setState(() {
+                    _completedExpanded = !_completedExpanded;
+                  });
+                },
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle_outline),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('已完成事项 (${doneTodos.length})')),
+                      Icon(
+                        _completedExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                          ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -582,38 +645,15 @@ class _TodoPageState extends State<TodoPage> {
                           ),
                         ],
                         const SizedBox(height: 10),
-                        TextField(
-                          controller: _searchController,
-                          onChanged: (value) {
-                            setState(() {
-                              _searchKeyword = value;
-                              _completedExpanded = false;
-                            });
-                          },
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.search),
-                            hintText: '搜索待办标题',
-                            suffixIcon: _searchKeyword.isEmpty
-                                ? null
-                                : IconButton(
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() {
-                                        _searchKeyword = '';
-                                        _completedExpanded = false;
-                                      });
-                                    },
-                                    icon: const Icon(Icons.clear),
-                                  ),
-                          ),
-                        ),
+                        _buildSearchBar(),
                         const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
                             color: _softSurfaceStrong(context),
-                            boxShadow: _shadowForTheme(context),
+                            border: SurfaceStyle.cardBorder(context),
+                            boxShadow: SurfaceStyle.cardShadow(context),
                           ),
                           child: Row(
                             children: [

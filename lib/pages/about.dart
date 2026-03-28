@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:todolist/core/const.dart';
 import 'package:todolist/widgets/gradient_background.dart';
+import 'package:todolist/widgets/surface_style.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AboutPage extends StatelessWidget {
@@ -20,15 +21,6 @@ class AboutPage extends StatelessWidget {
       return scheme.surfaceContainerHigh;
     }
     return Colors.white.withValues(alpha: 0.88);
-  }
-
-  List<BoxShadow> _shadowForTheme(BuildContext context) {
-    if (Theme.of(context).brightness == Brightness.dark) {
-      return const [];
-    }
-    return const [
-      BoxShadow(color: Color(0x14000000), blurRadius: 16, offset: Offset(0, 8)),
-    ];
   }
 
   @override
@@ -50,7 +42,8 @@ class AboutPage extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: _softSurface(context),
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: _shadowForTheme(context),
+                    border: SurfaceStyle.cardBorder(context),
+                    boxShadow: SurfaceStyle.cardShadow(context),
                   ),
                   child: Column(
                     children: [
@@ -78,15 +71,22 @@ class AboutPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Material(
-                  color: _softSurface(context),
-                  borderRadius: BorderRadius.circular(16),
-                  child: ListTile(
-                    leading: const Icon(Icons.code),
-                    title: const Text('GitHub 项目主页'),
-                    subtitle: Text(Const.githubUrl),
-                    trailing: const Icon(Icons.open_in_new),
-                    onTap: () => _launchURL(Const.githubUrl),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: SurfaceStyle.cardBorder(context),
+                    boxShadow: SurfaceStyle.cardShadow(context),
+                  ),
+                  child: Material(
+                    color: _softSurface(context),
+                    borderRadius: BorderRadius.circular(16),
+                    child: ListTile(
+                      leading: const Icon(Icons.code),
+                      title: const Text('GitHub 项目主页'),
+                      subtitle: Text(Const.githubUrl),
+                      trailing: const Icon(Icons.open_in_new),
+                      onTap: () => _launchURL(Const.githubUrl),
+                    ),
                   ),
                 ),
               ],

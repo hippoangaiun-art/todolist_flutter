@@ -14,6 +14,7 @@ import 'package:todolist/pages/schedule_settings_page.dart';
 import 'package:todolist/pages/section_config_page.dart';
 import 'package:todolist/utils/permission.dart';
 import 'package:todolist/widgets/gradient_background.dart';
+import 'package:todolist/widgets/surface_style.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
@@ -317,15 +318,6 @@ class _SchedulePageState extends State<SchedulePage> {
     return Colors.white.withValues(alpha: 0.92);
   }
 
-  List<BoxShadow> _shadowForTheme(BuildContext context) {
-    if (Theme.of(context).brightness == Brightness.dark) {
-      return const [];
-    }
-    return const [
-      BoxShadow(color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 6)),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -392,6 +384,8 @@ class _SchedulePageState extends State<SchedulePage> {
                     decoration: BoxDecoration(
                       color: _softSurface(context),
                       borderRadius: BorderRadius.circular(16),
+                      border: SurfaceStyle.cardBorder(context),
+                      boxShadow: SurfaceStyle.cardShadow(context),
                     ),
                     child: Row(
                       children: [
@@ -460,7 +454,8 @@ class _SchedulePageState extends State<SchedulePage> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
                               color: _softSurface(context),
-                              boxShadow: _shadowForTheme(context),
+                              border: SurfaceStyle.cardBorder(context),
+                              boxShadow: SurfaceStyle.cardShadow(context),
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
@@ -583,66 +578,89 @@ class _SchedulePageState extends State<SchedulePage> {
                                   (course) => Padding(
                                     padding: const EdgeInsets.only(bottom: 10),
                                     child: Material(
-                                      color: _softSurfaceStrong(context),
+                                      color: Colors.transparent,
                                       borderRadius: BorderRadius.circular(16),
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(16),
-                                        onTap: () =>
-                                            _openEditor(course: course),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(14),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          border: SurfaceStyle.cardBorder(
+                                            context,
+                                          ),
+                                          boxShadow:
+                                              SurfaceStyle.cardShadow(context),
+                                        ),
+                                        child: Material(
+                                          color: _softSurfaceStrong(context),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          child: InkWell(
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                            onTap: () =>
+                                                _openEditor(course: course),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(14),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      course.name,
-                                                      style: const TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.w700,
+                                                  Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          course.name,
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 16,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        onPressed: () =>
+                                                            _deleteCourse(
+                                                              course,
+                                                            ),
+                                                        icon: const Icon(
+                                                          Icons.delete_outline,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  if (course
+                                                          .classroom
+                                                          .isNotEmpty ||
+                                                      course.location.isNotEmpty)
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            bottom: 6,
+                                                          ),
+                                                      child: Text(
+                                                        '${course.classroom}  ${course.location}'
+                                                            .trim(),
                                                       ),
                                                     ),
-                                                  ),
-                                                  IconButton(
-                                                    onPressed: () =>
-                                                        _deleteCourse(course),
-                                                    icon: const Icon(
-                                                      Icons.delete_outline,
+                                                  ...course.meetings.map(
+                                                    (m) => Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            bottom: 4,
+                                                          ),
+                                                      child: Text(
+                                                        _meetingText(m),
+                                                        style: const TextStyle(
+                                                          fontSize: 13,
+                                                        ),
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
                                               ),
-                                              if (course.classroom.isNotEmpty ||
-                                                  course.location.isNotEmpty)
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        bottom: 6,
-                                                      ),
-                                                  child: Text(
-                                                    '${course.classroom}  ${course.location}'
-                                                        .trim(),
-                                                  ),
-                                                ),
-                                              ...course.meetings.map(
-                                                (m) => Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        bottom: 4,
-                                                      ),
-                                                  child: Text(
-                                                    _meetingText(m),
-                                                    style: const TextStyle(
-                                                      fontSize: 13,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -664,37 +682,44 @@ class _SchedulePageState extends State<SchedulePage> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: _softSurface(context),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
+    return DecoratedBox(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Icon(icon),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
+        border: SurfaceStyle.cardBorder(context),
+        boxShadow: SurfaceStyle.cardShadow(context),
+      ),
+      child: Material(
+        color: _softSurface(context),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(icon),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

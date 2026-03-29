@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:todolist/core/const.dart';
 import 'package:todolist/core/todo_rules.dart';
 import 'package:todolist/data/todo_repository.dart';
 import 'package:todolist/models/todo_item_v2.dart';
@@ -542,7 +541,9 @@ class _TodoPageState extends State<TodoPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(Const.appName),
+        titleSpacing: 16,
+        toolbarHeight: 72,
+        title: _buildSearchBar(),
         backgroundColor: Colors.transparent,
       ),
       extendBodyBehindAppBar: false,
@@ -644,8 +645,6 @@ class _TodoPageState extends State<TodoPage> {
                             ],
                           ),
                         ],
-                        const SizedBox(height: 10),
-                        _buildSearchBar(),
                         const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.all(14),

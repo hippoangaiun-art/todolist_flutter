@@ -5,7 +5,6 @@ import 'package:todolist/models/todo_item_v2.dart';
 import 'package:todolist/widgets/gradient_background.dart';
 import 'package:todolist/widgets/surface_style.dart';
 
-enum _TodoFilter { all, active, done }
 enum _TodoViewMode { all, byDate }
 
 class TodoPage extends StatefulWidget {
@@ -20,9 +19,9 @@ class _TodoPageState extends State<TodoPage> {
   final TextEditingController _searchController = TextEditingController();
   List<TodoItemV2> _todos = const [];
   bool _loading = true;
+  bool _activeExpanded = true;
   bool _completedExpanded = false;
   DateTime _selectedDate = TodoRules.normalize(DateTime.now());
-  _TodoFilter _filter = _TodoFilter.all;
   _TodoViewMode _viewMode = _TodoViewMode.all;
   String _searchKeyword = '';
 
@@ -79,6 +78,122 @@ class _TodoPageState extends State<TodoPage> {
     }
     setState(() {
       _selectedDate = TodoRules.normalize(picked);
+      _completedExpanded = false;
+    });
+  }
+
+  Future<void> _openFilterSheet() async {
+    var localMode = _viewMode;
+    var localDate = _selectedDate;
+
+    final result = await showModalBottomSheet<_TodoFilterSelection>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '筛选方式',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  RadioGroup<_TodoViewMode>(
+                    groupValue: localMode,
+                    onChanged: (value) {
+                      if (value == null) {
+                        return;
+                      }
+                      setModalState(() {
+                        localMode = value;
+                      });
+                    },
+                    child: Column(
+                      children: [
+                        const RadioListTile<_TodoViewMode>(
+                          title: Text('全部任务'),
+                          subtitle: Text('显示所有待办，不按日期限制'),
+                          value: _TodoViewMode.all,
+                        ),
+                        RadioListTile<_TodoViewMode>(
+                          title: const Text('按日期查看'),
+                          subtitle: Text(
+                            '当前日期：${_formatDate(localDate)} ${_weekdayLabel(localDate.weekday)}',
+                          ),
+                          value: _TodoViewMode.byDate,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (localMode == _TodoViewMode.byDate)
+                    ListTile(
+                      contentPadding: const EdgeInsets.only(left: 12, right: 4),
+                      leading: const Icon(Icons.event_outlined),
+                      title: const Text('选择筛选日期'),
+                      subtitle: Text(_formatDate(localDate)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: localDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                          locale: const Locale('zh', 'CN'),
+                        );
+                        if (picked == null) {
+                          return;
+                        }
+                        setModalState(() {
+                          localDate = TodoRules.normalize(picked);
+                        });
+                      },
+                    ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          child: const Text('取消'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            Navigator.of(sheetContext).pop(
+                              _TodoFilterSelection(
+                                mode: localMode,
+                                date: localDate,
+                              ),
+                            );
+                          },
+                          child: const Text('应用'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (result == null) {
+      return;
+    }
+    setState(() {
+      _viewMode = result.mode;
+      _selectedDate = result.date;
+      _activeExpanded = true;
+      _completedExpanded = false;
     });
   }
 
@@ -116,6 +231,7 @@ class _TodoPageState extends State<TodoPage> {
     }
     setState(() {
       _todos[idx] = TodoRules.toggleDone(_todos[idx]);
+      _activeExpanded = true;
       _completedExpanded = false;
     });
     await _saveTodos();
@@ -201,6 +317,7 @@ class _TodoPageState extends State<TodoPage> {
                           );
                         }
                       }
+                      _activeExpanded = true;
                       _completedExpanded = false;
                     });
                     await _saveTodos();
@@ -227,6 +344,7 @@ class _TodoPageState extends State<TodoPage> {
     final removed = _todos[removedIndex];
     setState(() {
       _todos.removeAt(removedIndex);
+      _activeExpanded = true;
       _completedExpanded = false;
     });
     await _saveTodos();
@@ -253,23 +371,11 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
-  List<TodoItemV2> _applyFilter(List<TodoItemV2> list) {
-    switch (_filter) {
-      case _TodoFilter.all:
-        return list;
-      case _TodoFilter.active:
-        return list.where((e) => !e.done).toList();
-      case _TodoFilter.done:
-        return list.where((e) => e.done).toList();
-    }
-  }
-
   List<TodoItemV2> _applySearch(List<TodoItemV2> list) {
     final keyword = _searchKeyword.trim().toLowerCase();
     if (keyword.isEmpty) {
       return list;
     }
-    // Search keeps behavior predictable by matching title only.
     return list
         .where((todo) => todo.title.toLowerCase().contains(keyword))
         .toList();
@@ -355,9 +461,8 @@ class _TodoPageState extends State<TodoPage> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 16,
-                                decoration: todo.done
-                                    ? TextDecoration.lineThrough
-                                    : null,
+                                decoration:
+                                    todo.done ? TextDecoration.lineThrough : null,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -385,56 +490,94 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   Widget _buildSearchBar() {
+    return Container(
+      height: 42,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(
+          alpha: Theme.of(context).brightness == Brightness.dark ? 0.7 : 0.85,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.22),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 10),
+          Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchKeyword = value;
+                  _completedExpanded = false;
+                });
+              },
+              decoration: const InputDecoration(
+                hintText: '搜索待办标题',
+                filled: false,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
+          if (_searchKeyword.isNotEmpty)
+            IconButton(
+              onPressed: () {
+                _searchController.clear();
+                setState(() {
+                  _searchKeyword = '';
+                  _completedExpanded = false;
+                });
+              },
+              icon: const Icon(Icons.cancel_outlined),
+              splashRadius: 18,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFoldHeader({
+    required String title,
+    required int count,
+    required bool expanded,
+    required VoidCallback onTap,
+    required IconData icon,
+  }) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: SurfaceStyle.cardBorder(context),
         boxShadow: SurfaceStyle.cardShadow(context),
       ),
       child: Material(
         color: _softSurfaceStrong(context),
-        borderRadius: BorderRadius.circular(18),
-        child: Row(
-          children: [
-            const SizedBox(width: 12),
-            Icon(
-              Icons.search_rounded,
-              size: 20,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) {
-                  setState(() {
-                    _searchKeyword = value;
-                    _completedExpanded = false;
-                  });
-                },
-                decoration: const InputDecoration(
-                  hintText: '搜索待办标题',
-                  filled: false,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 14),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(icon),
+                const SizedBox(width: 8),
+                Expanded(child: Text('$title ($count)')),
+                Icon(
+                  expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                 ),
-              ),
+              ],
             ),
-            if (_searchKeyword.isNotEmpty)
-              IconButton(
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() {
-                    _searchKeyword = '';
-                    _completedExpanded = false;
-                  });
-                },
-                icon: const Icon(Icons.cancel_outlined),
-                splashRadius: 20,
-              ),
-          ],
+          ),
         ),
       ),
     );
@@ -455,65 +598,44 @@ class _TodoPageState extends State<TodoPage> {
       );
     }
 
-    if (_filter != _TodoFilter.all) {
-      return ListView(
-        key: const ValueKey('todo-list-filtered'),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-        children: [
-          ...todos.asMap().entries.map(
-                (entry) => _buildTodoTile(entry.value, entry.key),
-              ),
-        ],
-      );
-    }
-
     final activeTodos = todos.where((e) => !e.done).toList();
     final doneTodos = todos.where((e) => e.done).toList();
 
-    // In "all" filter, completed items are grouped in a collapsible section.
     return ListView(
       key: const ValueKey('todo-list-grouped'),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       children: [
-        ...activeTodos.asMap().entries.map(
-              (entry) => _buildTodoTile(entry.value, entry.key),
-            ),
-        if (doneTodos.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: SurfaceStyle.cardBorder(context),
-              boxShadow: SurfaceStyle.cardShadow(context),
-            ),
-            child: Material(
-              color: _softSurfaceStrong(context),
-              borderRadius: BorderRadius.circular(14),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () {
-                  setState(() {
-                    _completedExpanded = !_completedExpanded;
-                  });
-                },
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle_outline),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text('已完成事项 (${doneTodos.length})')),
-                      Icon(
-                        _completedExpanded
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
-                          ),
-                    ],
-                  ),
+        if (activeTodos.isNotEmpty) ...[
+          _buildFoldHeader(
+            title: '未完成事项',
+            count: activeTodos.length,
+            expanded: _activeExpanded,
+            onTap: () {
+              setState(() {
+                _activeExpanded = !_activeExpanded;
+              });
+            },
+            icon: Icons.radio_button_unchecked,
+          ),
+          if (_activeExpanded) ...[
+            const SizedBox(height: 10),
+            ...activeTodos.asMap().entries.map(
+                  (entry) => _buildTodoTile(entry.value, entry.key),
                 ),
-              ),
-            ),
+          ],
+          const SizedBox(height: 8),
+        ],
+        if (doneTodos.isNotEmpty) ...[
+          _buildFoldHeader(
+            title: '已完成事项',
+            count: doneTodos.length,
+            expanded: _completedExpanded,
+            onTap: () {
+              setState(() {
+                _completedExpanded = !_completedExpanded;
+              });
+            },
+            icon: Icons.check_circle_outline,
           ),
           if (_completedExpanded) ...[
             const SizedBox(height: 10),
@@ -534,17 +656,35 @@ class _TodoPageState extends State<TodoPage> {
     final allTodos = _viewMode == _TodoViewMode.all
         ? TodoRules.sortByEndAt(_todos)
         : TodoRules.resolveForDate(_todos, _selectedDate);
-    final searchedTodos = _applySearch(allTodos);
-    final filteredTodos = _applyFilter(searchedTodos);
-    final doneCount = allTodos.where((e) => e.done).length;
-    final activeCount = allTodos.length - doneCount;
+    final filteredTodos = _applySearch(allTodos);
+    final doneCount = filteredTodos.where((e) => e.done).length;
+    final activeCount = filteredTodos.length - doneCount;
+
+    final appBarColor = Theme.of(context).brightness == Brightness.dark
+        ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.78)
+        : Colors.white.withValues(alpha: 0.76);
 
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 16,
-        toolbarHeight: 72,
+        titleSpacing: 12,
+        toolbarHeight: 68,
         title: _buildSearchBar(),
-        backgroundColor: Colors.transparent,
+        backgroundColor: appBarColor,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        actions: [
+          IconButton(
+            onPressed: _openFilterSheet,
+            tooltip: '筛选',
+            icon: Icon(
+              _viewMode == _TodoViewMode.all
+                  ? Icons.filter_list_rounded
+                  : Icons.filter_alt_rounded,
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       extendBodyBehindAppBar: false,
       body: GradientBackground(
@@ -556,37 +696,7 @@ class _TodoPageState extends State<TodoPage> {
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
                     child: Column(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ChoiceChip(
-                                label: const Text('全部'),
-                                selected: _viewMode == _TodoViewMode.all,
-                                onSelected: (_) {
-                                  setState(() {
-                                    _viewMode = _TodoViewMode.all;
-                                    _completedExpanded = false;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ChoiceChip(
-                                label: const Text('按日期'),
-                                selected: _viewMode == _TodoViewMode.byDate,
-                                onSelected: (_) {
-                                  setState(() {
-                                    _viewMode = _TodoViewMode.byDate;
-                                    _completedExpanded = false;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_viewMode == _TodoViewMode.byDate) ...[
-                          const SizedBox(height: 10),
+                        if (_viewMode == _TodoViewMode.byDate)
                           Row(
                             children: [
                               IconButton(
@@ -595,6 +705,7 @@ class _TodoPageState extends State<TodoPage> {
                                     _selectedDate = _selectedDate.subtract(
                                       const Duration(days: 1),
                                     );
+                                    _completedExpanded = false;
                                   });
                                 },
                                 icon: const Icon(Icons.chevron_left),
@@ -611,6 +722,8 @@ class _TodoPageState extends State<TodoPage> {
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       color: _softSurface(context),
+                                      border: SurfaceStyle.cardBorder(context),
+                                      boxShadow: SurfaceStyle.cardShadow(context),
                                     ),
                                     child: Row(
                                       mainAxisAlignment:
@@ -638,14 +751,15 @@ class _TodoPageState extends State<TodoPage> {
                                     _selectedDate = _selectedDate.add(
                                       const Duration(days: 1),
                                     );
+                                    _completedExpanded = false;
                                   });
                                 },
                                 icon: const Icon(Icons.chevron_right),
                               ),
                             ],
                           ),
-                        ],
-                        const SizedBox(height: 10),
+                        if (_viewMode == _TodoViewMode.byDate)
+                          const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
@@ -657,7 +771,7 @@ class _TodoPageState extends State<TodoPage> {
                           child: Row(
                             children: [
                               Expanded(
-                                child: _buildStat('总数', allTodos.length.toString()),
+                                child: _buildStat('总数', filteredTodos.length.toString()),
                               ),
                               Expanded(
                                 child: _buildStat('进行中', activeCount.toString()),
@@ -667,42 +781,6 @@ class _TodoPageState extends State<TodoPage> {
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            ChoiceChip(
-                              label: const Text('全部'),
-                              selected: _filter == _TodoFilter.all,
-                              onSelected: (_) {
-                                setState(() {
-                                  _filter = _TodoFilter.all;
-                                  _completedExpanded = false;
-                                });
-                              },
-                            ),
-                            ChoiceChip(
-                              label: const Text('未完成'),
-                              selected: _filter == _TodoFilter.active,
-                              onSelected: (_) {
-                                setState(() {
-                                  _filter = _TodoFilter.active;
-                                  _completedExpanded = false;
-                                });
-                              },
-                            ),
-                            ChoiceChip(
-                              label: const Text('已完成'),
-                              selected: _filter == _TodoFilter.done,
-                              onSelected: (_) {
-                                setState(() {
-                                  _filter = _TodoFilter.done;
-                                  _completedExpanded = false;
-                                });
-                              },
-                            ),
-                          ],
                         ),
                       ],
                     ),
@@ -753,4 +831,11 @@ class _TodoPageState extends State<TodoPage> {
       ],
     );
   }
+}
+
+class _TodoFilterSelection {
+  final _TodoViewMode mode;
+  final DateTime date;
+
+  const _TodoFilterSelection({required this.mode, required this.date});
 }

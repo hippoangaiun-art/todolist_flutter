@@ -674,20 +674,18 @@ class _TodoPageState extends State<TodoPage> {
     final filteredTodos = _applySearch(allTodos);
     final doneCount = filteredTodos.where((e) => e.done).length;
     final activeCount = filteredTodos.length - doneCount;
-
-    final appBarColor = Theme.of(context).brightness == Brightness.dark
-        ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.78)
-        : Colors.white.withValues(alpha: 0.76);
+    final topInset = MediaQuery.paddingOf(context).top + 68;
 
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 12,
         toolbarHeight: 68,
         title: _buildSearchBar(),
-        backgroundColor: appBarColor,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
+        forceMaterialTransparency: true,
         actions: [
           IconButton(
             onPressed: _openFilterSheet,
@@ -701,113 +699,124 @@ class _TodoPageState extends State<TodoPage> {
           const SizedBox(width: 4),
         ],
       ),
-      extendBodyBehindAppBar: false,
+      extendBodyBehindAppBar: true,
       body: GradientBackground(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-                    child: Column(
-                      children: [
-                        if (_viewMode == _TodoViewMode.byDate)
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedDate = _selectedDate.subtract(
-                                      const Duration(days: 1),
-                                    );
-                                    _completedExpanded = false;
-                                  });
-                                },
-                                icon: const Icon(Icons.chevron_left),
-                              ),
-                              Expanded(
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: _pickDate,
-                                  child: Ink(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 12,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      color: _softSurface(context),
-                                      border: SurfaceStyle.cardBorder(context),
-                                      boxShadow: SurfaceStyle.cardShadow(context),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(
-                                          Icons.today_outlined,
-                                          size: 18,
+        child: Padding(
+          padding: EdgeInsets.only(top: topInset),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                      child: Column(
+                        children: [
+                          if (_viewMode == _TodoViewMode.byDate)
+                            Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedDate = _selectedDate.subtract(
+                                        const Duration(days: 1),
+                                      );
+                                      _completedExpanded = false;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.chevron_left),
+                                ),
+                                Expanded(
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(16),
+                                    onTap: _pickDate,
+                                    child: Ink(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 12,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(16),
+                                        color: _softSurface(context),
+                                        border: SurfaceStyle.cardBorder(context),
+                                        boxShadow: SurfaceStyle.cardShadow(
+                                          context,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '${_formatDate(_selectedDate)} ${_weekdayLabel(_selectedDate.weekday)}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.today_outlined,
+                                            size: 18,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '${_formatDate(_selectedDate)} ${_weekdayLabel(_selectedDate.weekday)}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              IconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedDate = _selectedDate.add(
-                                      const Duration(days: 1),
-                                    );
-                                    _completedExpanded = false;
-                                  });
-                                },
-                                icon: const Icon(Icons.chevron_right),
-                              ),
-                            ],
+                                IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedDate = _selectedDate.add(
+                                        const Duration(days: 1),
+                                      );
+                                      _completedExpanded = false;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.chevron_right),
+                                ),
+                              ],
+                            ),
+                          if (_viewMode == _TodoViewMode.byDate)
+                            const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: _softSurfaceStrong(context),
+                              border: SurfaceStyle.cardBorder(context),
+                              boxShadow: SurfaceStyle.cardShadow(context),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _buildStat(
+                                    '总数',
+                                    filteredTodos.length.toString(),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildStat(
+                                    '进行中',
+                                    activeCount.toString(),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildStat('已完成', doneCount.toString()),
+                                ),
+                              ],
+                            ),
                           ),
-                        if (_viewMode == _TodoViewMode.byDate)
-                          const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: _softSurfaceStrong(context),
-                            border: SurfaceStyle.cardBorder(context),
-                            boxShadow: SurfaceStyle.cardShadow(context),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _buildStat('总数', filteredTodos.length.toString()),
-                              ),
-                              Expanded(
-                                child: _buildStat('进行中', activeCount.toString()),
-                              ),
-                              Expanded(
-                                child: _buildStat('已完成', doneCount.toString()),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
-                      child: _buildTodoList(filteredTodos),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: _buildTodoList(filteredTodos),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showEditDialog(),

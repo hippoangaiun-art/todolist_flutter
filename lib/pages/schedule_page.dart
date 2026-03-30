@@ -10,14 +10,15 @@ import 'package:todolist/models/course.dart';
 import 'package:todolist/models/schedule_settings.dart';
 import 'package:todolist/models/section_slot.dart';
 import 'package:todolist/pages/course_editor_page.dart';
-import 'package:todolist/pages/schedule_settings_page.dart';
 import 'package:todolist/pages/section_config_page.dart';
 import 'package:todolist/utils/permission.dart';
 import 'package:todolist/widgets/gradient_background.dart';
 import 'package:todolist/widgets/surface_style.dart';
 
 class SchedulePage extends StatefulWidget {
-  const SchedulePage({super.key});
+  final bool isActive;
+
+  const SchedulePage({super.key, required this.isActive});
 
   @override
   State<SchedulePage> createState() => _SchedulePageState();
@@ -35,6 +36,14 @@ class _SchedulePageState extends State<SchedulePage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant SchedulePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -100,25 +109,10 @@ class _SchedulePageState extends State<SchedulePage> {
     await _saveCourses();
   }
 
-  Future<void> _openSettings() async {
-    final next = await Navigator.of(context).push<ScheduleSettings>(
-      MaterialPageRoute(
-        builder: (_) => ScheduleSettingsPage(initial: _settings),
-      ),
+  void _showSettingsMovedTip() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('课表设置已移动到“关于”Tab')),
     );
-    if (next == null) {
-      return;
-    }
-    final week = ScheduleRules.resolveWeekFromDate(
-      DateTime.now(),
-      next.firstWeekDate,
-    );
-    setState(() {
-      _settings = next;
-      _selectedWeek = week;
-    });
-    appThemeModeNotifier.value = parseThemeMode(next.themeMode);
-    await _repository.saveSettings(next);
   }
 
   Future<DateTime?> _ensureFirstWeekDate() async {
@@ -324,13 +318,6 @@ class _SchedulePageState extends State<SchedulePage> {
       appBar: AppBar(
         title: const Text('课表'),
         backgroundColor: Colors.transparent,
-        actions: [
-          IconButton(
-            onPressed: _openSettings,
-            icon: const Icon(Icons.tune),
-            tooltip: '课表设置',
-          ),
-        ],
       ),
       body: GradientBackground(
         child: _loading
@@ -345,7 +332,7 @@ class _SchedulePageState extends State<SchedulePage> {
                           icon: Icons.edit_calendar,
                           title: '第一周日期',
                           subtitle: _formatDate(_settings.firstWeekDate),
-                          onTap: _openSettings,
+                          onTap: _showSettingsMovedTip,
                         ),
                       ),
                       const SizedBox(width: 10),

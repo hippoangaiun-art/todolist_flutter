@@ -19,7 +19,6 @@ class _TodoPageState extends State<TodoPage> {
   final TextEditingController _searchController = TextEditingController();
   List<TodoItemV2> _todos = const [];
   bool _loading = true;
-  bool _activeExpanded = true;
   bool _completedExpanded = false;
   DateTime _selectedDate = TodoRules.normalize(DateTime.now());
   _TodoViewMode _viewMode = _TodoViewMode.all;
@@ -192,7 +191,6 @@ class _TodoPageState extends State<TodoPage> {
     setState(() {
       _viewMode = result.mode;
       _selectedDate = result.date;
-      _activeExpanded = true;
       _completedExpanded = false;
     });
   }
@@ -231,7 +229,6 @@ class _TodoPageState extends State<TodoPage> {
     }
     setState(() {
       _todos[idx] = TodoRules.toggleDone(_todos[idx]);
-      _activeExpanded = true;
       _completedExpanded = false;
     });
     await _saveTodos();
@@ -317,7 +314,6 @@ class _TodoPageState extends State<TodoPage> {
                           );
                         }
                       }
-                      _activeExpanded = true;
                       _completedExpanded = false;
                     });
                     await _saveTodos();
@@ -344,7 +340,6 @@ class _TodoPageState extends State<TodoPage> {
     final removed = _todos[removedIndex];
     setState(() {
       _todos.removeAt(removedIndex);
-      _activeExpanded = true;
       _completedExpanded = false;
     });
     await _saveTodos();
@@ -583,6 +578,34 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
+  Widget _buildSectionHeader({
+    required String title,
+    required int count,
+    required IconData icon,
+  }) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: SurfaceStyle.cardBorder(context),
+        boxShadow: SurfaceStyle.cardShadow(context),
+      ),
+      child: Material(
+        color: _softSurfaceStrong(context),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Icon(icon),
+              const SizedBox(width: 8),
+              Expanded(child: Text('$title ($count)')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTodoList(List<TodoItemV2> todos) {
     if (todos.isEmpty) {
       return const Center(
@@ -606,23 +629,15 @@ class _TodoPageState extends State<TodoPage> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       children: [
         if (activeTodos.isNotEmpty) ...[
-          _buildFoldHeader(
+          _buildSectionHeader(
             title: '未完成事项',
             count: activeTodos.length,
-            expanded: _activeExpanded,
-            onTap: () {
-              setState(() {
-                _activeExpanded = !_activeExpanded;
-              });
-            },
             icon: Icons.radio_button_unchecked,
           ),
-          if (_activeExpanded) ...[
-            const SizedBox(height: 10),
-            ...activeTodos.asMap().entries.map(
-                  (entry) => _buildTodoTile(entry.value, entry.key),
-                ),
-          ],
+          const SizedBox(height: 10),
+          ...activeTodos.asMap().entries.map(
+                (entry) => _buildTodoTile(entry.value, entry.key),
+              ),
           const SizedBox(height: 8),
         ],
         if (doneTodos.isNotEmpty) ...[

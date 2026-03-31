@@ -93,32 +93,35 @@ class _AboutPageState extends State<AboutPage> {
     if (picked == null) {
       return;
     }
-    setState(() {
-      _settings = _settings.copyWith(
+    _applySettings(
+      settings: _settings.copyWith(
         firstWeekDate: DateTime(picked.year, picked.month, picked.day),
-      );
-    });
+      ),
+    );
   }
 
   void _clearFirstWeekDate() {
-    setState(() {
-      _settings = _settings.copyWith(clearFirstWeekDate: true);
-    });
+    _applySettings(
+      settings: _settings.copyWith(clearFirstWeekDate: true),
+    );
   }
 
-  Future<void> _saveSettings() async {
-    final next = _settings.copyWith(themeMode: encodeThemeMode(_themeMode));
-    await _repository.saveSettings(next);
-    appThemeModeNotifier.value = _themeMode;
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _settings = next;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('设置已保存')),
+  Future<void> _applySettings({
+    ScheduleSettings? settings,
+    ThemeMode? themeMode,
+  }) async {
+    final nextThemeMode = themeMode ?? _themeMode;
+    final nextSettings = (settings ?? _settings).copyWith(
+      themeMode: encodeThemeMode(nextThemeMode),
     );
+    if (mounted) {
+      setState(() {
+        _settings = nextSettings;
+        _themeMode = nextThemeMode;
+      });
+    }
+    await _repository.saveSettings(nextSettings);
+    appThemeModeNotifier.value = nextThemeMode;
   }
 
   @override
@@ -189,13 +192,11 @@ class _AboutPageState extends State<AboutPage> {
                               const SizedBox(height: 8),
                               RadioGroup<ThemeMode>(
                                 groupValue: _themeMode,
-                                onChanged: (value) {
+                                onChanged: (value) async {
                                   if (value == null) {
                                     return;
                                   }
-                                  setState(() {
-                                    _themeMode = value;
-                                  });
+                                  await _applySettings(themeMode: value);
                                 },
                                 child: const Column(
                                   children: [
@@ -212,15 +213,6 @@ class _AboutPageState extends State<AboutPage> {
                                       title: Text('深色模式'),
                                     ),
                                   ],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                width: double.infinity,
-                                child: FilledButton.icon(
-                                  onPressed: _saveSettings,
-                                  icon: const Icon(Icons.save_outlined),
-                                  label: const Text('保存设置'),
                                 ),
                               ),
                             ],

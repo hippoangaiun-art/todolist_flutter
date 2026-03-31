@@ -77,7 +77,7 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   String _meetingText(CourseMeeting meeting) {
-    return '${_weekdayLabel(meeting.weekday)} 第${meeting.startSection}-${meeting.endSection}节 ${meeting.weekStart}-${meeting.weekEnd}周';
+    return '${_weekdayLabel(meeting.weekday)} ${_meetingTimeText(meeting)} ${meeting.weekStart}-${meeting.weekEnd}周';
   }
 
   String _formatDate(DateTime? date) {
@@ -296,6 +296,30 @@ class _SchedulePageState extends State<SchedulePage> {
     return entries;
   }
 
+  String _formatMinutes(int minutes) {
+    final hour = (minutes ~/ 60).toString().padLeft(2, '0');
+    final minute = (minutes % 60).toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  SectionSlot? _findSection(int number) {
+    for (final section in _sections) {
+      if (section.number == number) {
+        return section;
+      }
+    }
+    return null;
+  }
+
+  String _meetingTimeText(CourseMeeting meeting) {
+    final start = _findSection(meeting.startSection);
+    final end = _findSection(meeting.endSection);
+    if (start == null || end == null) {
+      return '时间未配置';
+    }
+    return '${_formatMinutes(start.startMinutes)}-${_formatMinutes(end.endMinutes)}';
+  }
+
   Color _softSurface(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     if (Theme.of(context).brightness == Brightness.dark) {
@@ -502,7 +526,9 @@ class _SchedulePageState extends State<SchedulePage> {
                                                     ),
                                                     const SizedBox(height: 4),
                                                     Text(
-                                                      '第${entry.meeting.startSection}-${entry.meeting.endSection}节',
+                                                      _meetingTimeText(
+                                                        entry.meeting,
+                                                      ),
                                                       style: const TextStyle(
                                                         fontSize: 12,
                                                       ),

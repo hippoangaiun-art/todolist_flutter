@@ -546,7 +546,6 @@ class _TodoPageState extends State<TodoPage> {
     required int count,
     required bool expanded,
     required VoidCallback onTap,
-    required IconData icon,
   }) {
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -564,8 +563,6 @@ class _TodoPageState extends State<TodoPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                Icon(icon),
-                const SizedBox(width: 8),
                 Expanded(child: Text('$title ($count)')),
                 Icon(
                   expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
@@ -581,7 +578,6 @@ class _TodoPageState extends State<TodoPage> {
   Widget _buildSectionHeader({
     required String title,
     required int count,
-    required IconData icon,
   }) {
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -596,8 +592,6 @@ class _TodoPageState extends State<TodoPage> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
-              Icon(icon),
-              const SizedBox(width: 8),
               Expanded(child: Text('$title ($count)')),
             ],
           ),
@@ -632,7 +626,6 @@ class _TodoPageState extends State<TodoPage> {
           _buildSectionHeader(
             title: '未完成事项',
             count: activeTodos.length,
-            icon: Icons.radio_button_unchecked,
           ),
           const SizedBox(height: 10),
           ...activeTodos.asMap().entries.map(
@@ -650,7 +643,6 @@ class _TodoPageState extends State<TodoPage> {
                 _completedExpanded = !_completedExpanded;
               });
             },
-            icon: Icons.check_circle_outline,
           ),
           if (_completedExpanded) ...[
             const SizedBox(height: 10),

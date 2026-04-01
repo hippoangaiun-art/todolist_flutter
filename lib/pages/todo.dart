@@ -624,7 +624,7 @@ class _TodoPageState extends State<TodoPage> {
       children: [
         if (activeTodos.isNotEmpty) ...[
           _buildSectionHeader(
-            title: '未完成事项',
+            title: '未完成',
             count: activeTodos.length,
           ),
           const SizedBox(height: 10),
@@ -635,7 +635,7 @@ class _TodoPageState extends State<TodoPage> {
         ],
         if (doneTodos.isNotEmpty) ...[
           _buildFoldHeader(
-            title: '已完成事项',
+            title: '已完成',
             count: doneTodos.length,
             expanded: _completedExpanded,
             onTap: () {

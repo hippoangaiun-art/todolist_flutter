@@ -16,9 +16,15 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const TodoPage(),
-      SchedulePage(isActive: _selectedIndex == 1),
-      SettingsPage(isActive: _selectedIndex == 2),
+      HeroMode(enabled: _selectedIndex == 0, child: const TodoPage()),
+      HeroMode(
+        enabled: _selectedIndex == 1,
+        child: SchedulePage(isActive: _selectedIndex == 1),
+      ),
+      HeroMode(
+        enabled: _selectedIndex == 2,
+        child: SettingsPage(isActive: _selectedIndex == 2),
+      ),
     ];
 
     return Scaffold(

@@ -456,8 +456,9 @@ class _TodoPageState extends State<TodoPage> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 16,
-                                decoration:
-                                    todo.done ? TextDecoration.lineThrough : null,
+                                decoration: todo.done
+                                    ? TextDecoration.lineThrough
+                                    : null,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -565,7 +566,9 @@ class _TodoPageState extends State<TodoPage> {
               children: [
                 Expanded(child: Text('$title ($count)')),
                 Icon(
-                  expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  expanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
                 ),
               ],
             ),
@@ -575,10 +578,7 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
-  Widget _buildSectionHeader({
-    required String title,
-    required int count,
-  }) {
+  Widget _buildSectionHeader({required String title, required int count}) {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
@@ -590,11 +590,7 @@ class _TodoPageState extends State<TodoPage> {
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              Expanded(child: Text('$title ($count)')),
-            ],
-          ),
+          child: Row(children: [Expanded(child: Text('$title ($count)'))]),
         ),
       ),
     );
@@ -623,14 +619,11 @@ class _TodoPageState extends State<TodoPage> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       children: [
         if (activeTodos.isNotEmpty) ...[
-          _buildSectionHeader(
-            title: '未完成',
-            count: activeTodos.length,
-          ),
+          _buildSectionHeader(title: '未完成', count: activeTodos.length),
           const SizedBox(height: 10),
           ...activeTodos.asMap().entries.map(
-                (entry) => _buildTodoTile(entry.value, entry.key),
-              ),
+            (entry) => _buildTodoTile(entry.value, entry.key),
+          ),
           const SizedBox(height: 8),
         ],
         if (doneTodos.isNotEmpty) ...[
@@ -647,11 +640,9 @@ class _TodoPageState extends State<TodoPage> {
           if (_completedExpanded) ...[
             const SizedBox(height: 10),
             ...doneTodos.asMap().entries.map(
-                  (entry) => _buildTodoTile(
-                    entry.value,
-                    activeTodos.length + entry.key,
-                  ),
-                ),
+              (entry) =>
+                  _buildTodoTile(entry.value, activeTodos.length + entry.key),
+            ),
           ],
         ],
       ],
@@ -729,7 +720,9 @@ class _TodoPageState extends State<TodoPage> {
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(16),
                                         color: _softSurface(context),
-                                        border: SurfaceStyle.cardBorder(context),
+                                        border: SurfaceStyle.cardBorder(
+                                          context,
+                                        ),
                                         boxShadow: SurfaceStyle.cardShadow(
                                           context,
                                         ),
@@ -792,7 +785,10 @@ class _TodoPageState extends State<TodoPage> {
                                   ),
                                 ),
                                 Expanded(
-                                  child: _buildStat('已完成', doneCount.toString()),
+                                  child: _buildStat(
+                                    '已完成',
+                                    doneCount.toString(),
+                                  ),
                                 ),
                               ],
                             ),
@@ -811,6 +807,7 @@ class _TodoPageState extends State<TodoPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'todo_add_fab',
         onPressed: () => _showEditDialog(),
         icon: const Icon(Icons.add),
         label: const Text('新增待办'),

@@ -667,6 +667,7 @@ class _SchedulePageState extends State<SchedulePage> {
       floatingActionButton: _loading
           ? null
           : FloatingActionButton.extended(
+              heroTag: 'schedule_import_fab',
               onPressed: _importFromExcel,
               icon: const Icon(Icons.upload_file),
               label: const Text('导入课表'),

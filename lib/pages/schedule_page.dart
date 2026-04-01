@@ -109,12 +109,6 @@ class _SchedulePageState extends State<SchedulePage> {
     await _saveCourses();
   }
 
-  void _showSettingsMovedTip() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('课表设置已移动到“设置”Tab')),
-    );
-  }
-
   Future<DateTime?> _ensureFirstWeekDate() async {
     if (_settings.firstWeekDate != null) {
       return _settings.firstWeekDate;
@@ -349,28 +343,6 @@ class _SchedulePageState extends State<SchedulePage> {
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _actionCard(
-                          icon: Icons.edit_calendar,
-                          title: '第一周日期',
-                          subtitle: _formatDate(_settings.firstWeekDate),
-                          onTap: _showSettingsMovedTip,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _actionCard(
-                          icon: Icons.upload_file,
-                          title: '导入课表',
-                          subtitle: 'Excel 文件',
-                          onTap: _importFromExcel,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
                   _actionCard(
                     icon: Icons.schedule,
                     title: '节次设置',
@@ -686,6 +658,13 @@ class _SchedulePageState extends State<SchedulePage> {
                 ],
               ),
       ),
+      floatingActionButton: _loading
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _importFromExcel,
+              icon: const Icon(Icons.upload_file),
+              label: const Text('导入课表'),
+            ),
     );
   }
 

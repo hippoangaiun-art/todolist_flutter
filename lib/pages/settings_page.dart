@@ -267,15 +267,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: Column(
                       children: [
                         ListTile(
-                          leading: const Icon(Icons.info_outline),
-                          title: const Text('应用名称'),
-                          subtitle: const Text('BUPT ToDo List'),
-                        ),
-                        _buildDivider(),
-                        ListTile(
                           leading: const Icon(Icons.code),
-                          title: const Text('GitHub 项目主页'),
-                          subtitle: Text(Const.githubUrl),
+                          title: const Text('BUPT ToDo List'),
+                          subtitle: const Text('访问GitHub主页'),
                           trailing: const Icon(Icons.open_in_new),
                           onTap: () => _launchURL(Const.githubUrl),
                         ),

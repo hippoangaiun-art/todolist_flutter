@@ -336,6 +336,22 @@ class _SchedulePageState extends State<SchedulePage> {
       appBar: AppBar(
         title: const Text('课表'),
         backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(
+            tooltip: '节次设置',
+            onPressed: _loading
+                ? null
+                : () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const SectionConfigPage(),
+                      ),
+                    );
+                    await _load();
+                  },
+            icon: const Icon(Icons.schedule),
+          ),
+        ],
       ),
       body: GradientBackground(
         child: _loading
@@ -343,22 +359,6 @@ class _SchedulePageState extends State<SchedulePage> {
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  _actionCard(
-                    icon: Icons.schedule,
-                    title: '节次设置',
-                    subtitle: _sections.isEmpty
-                        ? '尚未配置节次'
-                        : '已配置 ${_sections.length} 节，点击编辑',
-                    onTap: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const SectionConfigPage(),
-                        ),
-                      );
-                      await _load();
-                    },
-                  ),
-                  const SizedBox(height: 14),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -567,21 +567,25 @@ class _SchedulePageState extends State<SchedulePage> {
                                       borderRadius: BorderRadius.circular(16),
                                       child: DecoratedBox(
                                         decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                           border: SurfaceStyle.cardBorder(
                                             context,
                                           ),
-                                          boxShadow:
-                                              SurfaceStyle.cardShadow(context),
+                                          boxShadow: SurfaceStyle.cardShadow(
+                                            context,
+                                          ),
                                         ),
                                         child: Material(
                                           color: _softSurfaceStrong(context),
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                           child: InkWell(
-                                            borderRadius:
-                                                BorderRadius.circular(16),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
                                             onTap: () =>
                                                 _openEditor(course: course),
                                             child: Padding(
@@ -618,7 +622,9 @@ class _SchedulePageState extends State<SchedulePage> {
                                                   if (course
                                                           .classroom
                                                           .isNotEmpty ||
-                                                      course.location.isNotEmpty)
+                                                      course
+                                                          .location
+                                                          .isNotEmpty)
                                                     Padding(
                                                       padding:
                                                           const EdgeInsets.only(
@@ -665,56 +671,6 @@ class _SchedulePageState extends State<SchedulePage> {
               icon: const Icon(Icons.upload_file),
               label: const Text('导入课表'),
             ),
-    );
-  }
-
-  Widget _actionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: SurfaceStyle.cardBorder(context),
-        boxShadow: SurfaceStyle.cardShadow(context),
-      ),
-      child: Material(
-        color: _softSurface(context),
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Icon(icon),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

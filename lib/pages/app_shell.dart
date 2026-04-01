@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:todolist/pages/about.dart';
 import 'package:todolist/pages/schedule_page.dart';
+import 'package:todolist/pages/settings_page.dart';
 import 'package:todolist/pages/todo.dart';
 
 class AppShell extends StatefulWidget {
@@ -18,7 +18,7 @@ class _AppShellState extends State<AppShell> {
     final pages = [
       const TodoPage(),
       SchedulePage(isActive: _selectedIndex == 1),
-      AboutPage(isActive: _selectedIndex == 2),
+      SettingsPage(isActive: _selectedIndex == 2),
     ];
 
     return Scaffold(
@@ -42,9 +42,9 @@ class _AppShellState extends State<AppShell> {
             label: '课表',
           ),
           NavigationDestination(
-            icon: Icon(Icons.info_outline),
-            selectedIcon: Icon(Icons.info),
-            label: '关于',
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: '设置',
           ),
         ],
       ),

@@ -19,7 +19,7 @@ void main() {
 
     expect(find.text('待办'), findsOneWidget);
     expect(find.text('课表'), findsOneWidget);
-    expect(find.text('关于'), findsOneWidget);
+    expect(find.text('设置'), findsOneWidget);
 
     await tester.tap(find.text('课表'));
     await tester.pumpAndSettle();

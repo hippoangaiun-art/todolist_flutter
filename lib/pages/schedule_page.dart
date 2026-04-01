@@ -111,7 +111,7 @@ class _SchedulePageState extends State<SchedulePage> {
 
   void _showSettingsMovedTip() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('课表设置已移动到“关于”Tab')),
+      const SnackBar(content: Text('课表设置已移动到“设置”Tab')),
     );
   }
 
